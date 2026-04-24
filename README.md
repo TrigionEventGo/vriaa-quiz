@@ -34,6 +34,7 @@ Voor een party-build op **één** Node-proces (typisch `next start` op één mac
 2. **Live sessie (host)** — maakt een code en opent `/host/<CODE>`.
 3. Deelnemers openen `/play/<CODE>`, vullen een naam in (`POST .../players`), en antwoorden per vraag (`POST .../answer`); UI poll’t elke ~2s voor host-index + score. Per vraag is er een **server-side timer** (standaard 25s, `DEFAULT_QUESTION_SECONDS` in code); na afloop worden geen nieuwe antwoorden meer geaccepteerd.
 4. Host gebruikt *Volgende* / *Vorige* om de vraag te wisselen (start een nieuwe timer).
+5. Op de **laatste vraag** tikt de host **Quiz afronden** — spelers zien daarna een **afsluitscherm** met de **winnaar(s)** (ex aequo = meerdere namen), eigen score en top 8. **Vorige** op het hostscherm opent de laatste vraag weer.
 
 > Op serverless met meerdere instances heeft in-memory state **geen** gedeeld geheugen — gebruik dit pad voor rehearsal op één instance, of plan Redis/SSE voor productie (zie roadmap in Paperclip).
 

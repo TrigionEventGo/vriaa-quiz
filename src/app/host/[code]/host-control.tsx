@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { startTransition, useCallback, useEffect, useState } from "react";
 
 function formatSecondsLeft(endsAt: number): number {
   return Math.max(0, Math.ceil((endsAt - Date.now()) / 1000));
@@ -62,7 +62,9 @@ export function HostControl({ code }: { code: string }) {
   }, [code]);
 
   useEffect(() => {
-    void refresh();
+    startTransition(() => {
+      void refresh();
+    });
   }, [refresh]);
 
   useEffect(() => {

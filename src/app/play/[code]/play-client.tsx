@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { startTransition, useCallback, useEffect, useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -144,13 +144,12 @@ export function PlayClient({ code }: { code: string }) {
   useEffect(() => {
     const stored =
       typeof window !== "undefined" ? window.sessionStorage.getItem(storageKey(codeKey)) : null;
-    if (stored) setPlayerId(stored);
+    if (stored) startTransition(() => setPlayerId(stored));
   }, [codeKey]);
 
   useEffect(() => {
     if (!playerId) return;
     const pid = playerId;
-    let timer: ReturnType<typeof setInterval> | undefined;
     let cancelled = false;
 
     async function tick() {
@@ -175,18 +174,23 @@ export function PlayClient({ code }: { code: string }) {
     }
 
     void tick();
-    timer = setInterval(() => void tick(), 2000);
+    const timer = setInterval(() => void tick(), 2000);
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") void tick();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
     return () => {
       cancelled = true;
-      if (timer) clearInterval(timer);
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [codeKey, playerId, pollSession]);
 
   useEffect(() => {
     if (!session) return;
     const answered = session.player.answeredCurrent;
-    if (!answered) setLastSubmit(null);
-  }, [session?.questionIndex, session?.player.answeredCurrent]);
+    if (!answered) startTransition(() => setLastSubmit(null));
+  }, [session, session?.questionIndex, session?.player.answeredCurrent]);
 
   async function handleJoin() {
     const name = nickname.trim();
