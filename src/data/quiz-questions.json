@@ -1,0 +1,32 @@
+[
+  {
+    "question": "Wat is Marions favoriete vakantiebestemming?",
+    "options": ["Spanje", "Italië", "Griekenland", "Frankrijk"],
+    "correct": 1
+  },
+  {
+    "question": "Welk drankje bestelt Marion het liefst?",
+    "options": ["Prosecco", "Gin-tonic", "Witte wijn", "Aperol Spritz"],
+    "correct": 0
+  },
+  {
+    "question": "Wat is Marions guilty pleasure op tv?",
+    "options": [
+      "Love Island",
+      "Married at First Sight",
+      "Temptation Island",
+      "The Bachelor"
+    ],
+    "correct": 1
+  },
+  {
+    "question": "Welk eten kan Marion niet weerstaan?",
+    "options": ["Sushi", "Pizza", "Pasta", "Tacos"],
+    "correct": 2
+  },
+  {
+    "question": "Waar heeft Marion haar partner ontmoet?",
+    "options": ["Op werk", "Via vrienden", "Online", "Op vakantie"],
+    "correct": 0
+  }
+]

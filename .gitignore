@@ -36,6 +36,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# runtime quiz overrides (defaults stay in src/data/)
+/data/quiz-questions.json
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
