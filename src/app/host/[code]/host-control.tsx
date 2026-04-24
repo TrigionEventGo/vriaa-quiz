@@ -7,11 +7,18 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
+type LeaderRow = {
+  playerId: string;
+  nickname: string;
+  totalPoints: number;
+};
+
 type SessionDto = {
   code: string;
   questionIndex: number;
   totalQuestions: number;
   updatedAt: number;
+  leaderboard?: LeaderRow[];
 };
 
 export function HostControl({ code }: { code: string }) {
@@ -20,9 +27,10 @@ export function HostControl({ code }: { code: string }) {
 
   const refresh = useCallback(async () => {
     try {
-      const res = await fetch(`/api/live/sessions/${encodeURIComponent(code)}`, {
-        cache: "no-store",
-      });
+      const res = await fetch(
+        `/api/live/sessions/${encodeURIComponent(code)}?leaderboard=1`,
+        { cache: "no-store", credentials: "include" }
+      );
       const body = (await res.json().catch(() => ({}))) as SessionDto & {
         error?: string;
       };
@@ -42,6 +50,11 @@ export function HostControl({ code }: { code: string }) {
     void refresh();
   }, [refresh]);
 
+  useEffect(() => {
+    const t = setInterval(() => void refresh(), 3000);
+    return () => clearInterval(t);
+  }, [refresh]);
+
   async function patch(action: "next" | "prev") {
     setError(null);
     try {
@@ -51,14 +64,12 @@ export function HostControl({ code }: { code: string }) {
         credentials: "include",
         body: JSON.stringify({ action }),
       });
-      const body = (await res.json().catch(() => ({}))) as SessionDto & {
-        error?: string;
-      };
+      const errBody = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) {
-        setError(body.error ?? `Actie mislukt (${res.status})`);
+        setError(errBody.error ?? `Actie mislukt (${res.status})`);
         return;
       }
-      setState(body);
+      await refresh();
     } catch {
       setError("Netwerkfout.");
     }
@@ -120,6 +131,27 @@ export function HostControl({ code }: { code: string }) {
                   Vernieuwen
                 </Button>
               </div>
+              {state.leaderboard && state.leaderboard.length > 0 && (
+                <div className="rounded-xl border border-white/10 bg-muted/20 p-3">
+                  <p className="mb-2 text-sm font-semibold text-foreground">
+                    Scorebord (tot nu toe)
+                  </p>
+                  <ol className="space-y-1.5 text-sm">
+                    {state.leaderboard.map((row, i) => (
+                      <li
+                        key={row.playerId}
+                        className="flex items-center justify-between gap-2 tabular-nums"
+                      >
+                        <span className="text-muted-foreground">
+                          {i + 1}.{" "}
+                          <span className="font-medium text-foreground">{row.nickname}</span>
+                        </span>
+                        <span className="quiz-score-nums font-semibold">{row.totalPoints}</span>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              )}
             </>
           )}
         </CardContent>

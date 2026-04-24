@@ -25,6 +25,7 @@ export async function GET(request: Request, context: RouteContext) {
 
   const url = new URL(request.url);
   const playerId = url.searchParams.get("playerId")?.trim() ?? "";
+  const wantLeaderboard = url.searchParams.get("leaderboard") === "1";
 
   const base = {
     code: session.code,
@@ -32,6 +33,19 @@ export async function GET(request: Request, context: RouteContext) {
     totalQuestions: total,
     updatedAt: session.updatedAt,
   };
+
+  if (wantLeaderboard && (await isAdminAuthorized(request))) {
+    const rows = Object.values(session.players).map((p) => ({
+      playerId: p.id,
+      nickname: p.nickname,
+      totalPoints: totalScoreFromAnswerMap(questions, p.answersByQuestion),
+    }));
+    rows.sort(
+      (a, b) =>
+        b.totalPoints - a.totalPoints || a.nickname.localeCompare(b.nickname, "nl")
+    );
+    return NextResponse.json({ ...base, leaderboard: rows });
+  }
 
   if (!playerId) {
     return NextResponse.json(base);
