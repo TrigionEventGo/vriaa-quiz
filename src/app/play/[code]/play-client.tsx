@@ -26,6 +26,10 @@ function storageKey(code: string) {
 type SessionBase = {
   questionIndex: number;
   totalQuestions: number;
+  secondsPerQuestion: number;
+  questionEndsAt: number;
+  timerLocked: boolean;
+  standingsTop: { nickname: string; totalPoints: number }[];
 };
 
 type SessionWithPlayer = SessionBase & {
@@ -35,6 +39,10 @@ type SessionWithPlayer = SessionBase & {
     totalPoints: number;
   };
 };
+
+function secondsLeft(endsAt: number): number {
+  return Math.max(0, Math.ceil((endsAt - Date.now()) / 1000));
+}
 
 export function PlayClient({ code }: { code: string }) {
   const codeKey = useMemo(() => code.trim().toUpperCase(), [code]);
@@ -49,6 +57,12 @@ export function PlayClient({ code }: { code: string }) {
     points: 0 | 1;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [tick, setTick] = useState(0);
+
+  useEffect(() => {
+    const id = setInterval(() => setTick((n) => n + 1), 250);
+    return () => clearInterval(id);
+  }, []);
 
   const loadQuestions = useCallback(async () => {
     const res = await fetch("/api/quiz-questions", { cache: "no-store" });
@@ -65,13 +79,27 @@ export function PlayClient({ code }: { code: string }) {
         `/api/live/sessions/${encodeURIComponent(codeKey)}?playerId=${encodeURIComponent(pid)}`,
         { cache: "no-store" }
       );
-      const body = (await res.json()) as SessionWithPlayer & { error?: string };
+      const parsed = (await res.json()) as Partial<SessionWithPlayer> & {
+        error?: string;
+      };
       if (!res.ok) {
-        if (res.status === 404 && body.error === "Unknown player") {
+        if (res.status === 404 && parsed.error === "Unknown player") {
           return { kind: "unknown_player" as const };
         }
-        throw new Error(body.error ?? "Sessie niet gevonden.");
+        throw new Error(parsed.error ?? "Sessie niet gevonden.");
       }
+      if (!parsed.player) {
+        throw new Error("Sessie-antwoord onvolledig.");
+      }
+      const body: SessionWithPlayer = {
+        questionIndex: parsed.questionIndex ?? 0,
+        totalQuestions: parsed.totalQuestions ?? 0,
+        secondsPerQuestion: parsed.secondsPerQuestion ?? 25,
+        questionEndsAt: parsed.questionEndsAt ?? Date.now(),
+        timerLocked: parsed.timerLocked ?? false,
+        standingsTop: Array.isArray(parsed.standingsTop) ? parsed.standingsTop : [],
+        player: parsed.player,
+      };
       return { kind: "ok" as const, body };
     },
     [codeKey]
@@ -279,12 +307,14 @@ export function PlayClient({ code }: { code: string }) {
   const idx = Math.min(session.questionIndex, questions.length - 1);
   const q = questions[idx]!;
   const answered = session.player.answeredCurrent;
-  const canPick = !answered && !answerBusy;
+  const lockedOut = session.timerLocked || secondsLeft(session.questionEndsAt) <= 0;
+  const canPick = !answered && !answerBusy && !lockedOut;
+  const left = secondsLeft(session.questionEndsAt);
 
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center px-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] py-6">
       <Card className="w-full max-w-md border border-white/10 bg-card/95 shadow-xl ring-1 ring-white/5 backdrop-blur-sm">
-        <CardHeader className="gap-2 pb-2">
+        <CardHeader className="gap-2 pb-2" data-tick={tick}>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <Badge variant="secondary" className="text-xs font-semibold">
               Live · vraag {idx + 1}/{questions.length}
@@ -296,6 +326,15 @@ export function PlayClient({ code }: { code: string }) {
               {session.player.totalPoints} punten
             </Badge>
           </div>
+          <p className="text-center text-sm text-muted-foreground">
+            {lockedOut ? (
+              <span className="font-medium text-destructive">Tijd is om</span>
+            ) : (
+              <>
+                Nog <span className="font-mono font-semibold text-foreground">{left}</span>s
+              </>
+            )}
+          </p>
           <p className="text-xs text-muted-foreground">
             <span className="font-medium text-foreground">{session.player.nickname}</span> ·{" "}
             <span className="font-mono">{codeKey}</span>
@@ -334,8 +373,38 @@ export function PlayClient({ code }: { code: string }) {
               </span>
             )}
             {!answerBusy && answered && !lastSubmit && "Antwoord ontvangen. Wacht op de host."}
-            {!answerBusy && !answered && "Tik op een antwoord. Je ziet daarna of het goed was."}
+            {!answerBusy && !answered && lockedOut && "Je kon niet meer antwoorden — wacht tot de host de volgende vraag opent."}
+            {!answerBusy && !answered && !lockedOut && "Tik op een antwoord. Je ziet daarna of het goed was."}
           </p>
+          {session.standingsTop.length > 0 && (answered || lockedOut) && (
+            <div className="mt-4 rounded-xl border border-white/10 bg-muted/15 p-3">
+              <p className="mb-2 text-center text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Top {Math.min(8, session.standingsTop.length)}
+              </p>
+              <ol className="space-y-1 text-sm">
+                {session.standingsTop.map((row, i) => (
+                  <li
+                    key={`${row.nickname}-${i}`}
+                    className="flex justify-between gap-2 tabular-nums text-muted-foreground"
+                  >
+                    <span>
+                      {i + 1}.{" "}
+                      <span
+                        className={
+                          row.nickname === session.player.nickname
+                            ? "font-semibold text-foreground"
+                            : ""
+                        }
+                      >
+                        {row.nickname}
+                      </span>
+                    </span>
+                    <span className="quiz-score-nums font-medium">{row.totalPoints}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

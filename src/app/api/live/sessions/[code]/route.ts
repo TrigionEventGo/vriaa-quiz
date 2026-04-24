@@ -27,12 +27,28 @@ export async function GET(request: Request, context: RouteContext) {
   const playerId = url.searchParams.get("playerId")?.trim() ?? "";
   const wantLeaderboard = url.searchParams.get("leaderboard") === "1";
 
+  const now = Date.now();
+  const timerLocked = now >= session.questionEndsAt;
   const base = {
     code: session.code,
     questionIndex: session.questionIndex,
     totalQuestions: total,
     updatedAt: session.updatedAt,
+    secondsPerQuestion: session.secondsPerQuestion,
+    questionEndsAt: session.questionEndsAt,
+    timerLocked,
   };
+
+  const standingsTop = Object.values(session.players)
+    .map((p) => ({
+      nickname: p.nickname,
+      totalPoints: totalScoreFromAnswerMap(questions, p.answersByQuestion),
+    }))
+    .sort(
+      (a, b) =>
+        b.totalPoints - a.totalPoints || a.nickname.localeCompare(b.nickname, "nl")
+    )
+    .slice(0, 8);
 
   if (wantLeaderboard && (await isAdminAuthorized(request))) {
     const rows = Object.values(session.players).map((p) => ({
@@ -70,6 +86,7 @@ export async function GET(request: Request, context: RouteContext) {
       answeredCurrent,
       totalPoints,
     },
+    standingsTop,
   });
 }
 
@@ -102,10 +119,14 @@ export async function PATCH(request: Request, context: RouteContext) {
   if (!next) {
     return NextResponse.json({ error: "Session not found" }, { status: 404 });
   }
+  const now = Date.now();
   return NextResponse.json({
     code: next.code,
     questionIndex: next.questionIndex,
     totalQuestions: maxIndex + 1,
     updatedAt: next.updatedAt,
+    secondsPerQuestion: next.secondsPerQuestion,
+    questionEndsAt: next.questionEndsAt,
+    timerLocked: now >= next.questionEndsAt,
   });
 }

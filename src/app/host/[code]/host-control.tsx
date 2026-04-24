@@ -3,6 +3,10 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
+function formatSecondsLeft(endsAt: number): number {
+  return Math.max(0, Math.ceil((endsAt - Date.now()) / 1000));
+}
+
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -18,12 +22,21 @@ type SessionDto = {
   questionIndex: number;
   totalQuestions: number;
   updatedAt: number;
+  secondsPerQuestion?: number;
+  questionEndsAt?: number;
+  timerLocked?: boolean;
   leaderboard?: LeaderRow[];
 };
 
 export function HostControl({ code }: { code: string }) {
   const [state, setState] = useState<SessionDto | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [tick, setTick] = useState(0);
+
+  useEffect(() => {
+    const id = setInterval(() => setTick((n) => n + 1), 250);
+    return () => clearInterval(id);
+  }, []);
 
   const refresh = useCallback(async () => {
     try {
@@ -120,6 +133,20 @@ export function HostControl({ code }: { code: string }) {
                   </span>
                 ) : null}
               </p>
+              {typeof state.questionEndsAt === "number" && (
+                <p className="text-sm text-muted-foreground" data-tick={tick}>
+                  Timer:{" "}
+                  <span className="font-mono font-semibold text-foreground tabular-nums">
+                    {state.timerLocked || formatSecondsLeft(state.questionEndsAt) <= 0
+                      ? "0"
+                      : formatSecondsLeft(state.questionEndsAt)}
+                    s
+                  </span>{" "}
+                  <span className="text-xs">
+                    (max {state.secondsPerQuestion ?? "—"}s)
+                  </span>
+                </p>
+              )}
               <div className="flex flex-wrap gap-2">
                 <Button type="button" variant="outline" onClick={() => void patch("prev")}>
                   Vorige

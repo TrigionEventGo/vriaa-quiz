@@ -1,5 +1,8 @@
 import { scoreMultipleChoice, totalScoreFromAnswerMap } from "@/lib/scoring";
 
+/** Wall-clock deadline for answering the active `questionIndex` (ms since epoch). */
+export const DEFAULT_QUESTION_SECONDS = 25;
+
 /** One live run = implicit single round (quiz engine v1). */
 export type LivePlayer = {
   id: string;
@@ -12,6 +15,10 @@ export type LivePlayer = {
 export type LiveSessionState = {
   code: string;
   questionIndex: number;
+  /** Countdown length applied when the host advances the question. */
+  secondsPerQuestion: number;
+  /** When answers for `questionIndex` stop scoring (server-enforced). */
+  questionEndsAt: number;
   updatedAt: number;
   players: Record<string, LivePlayer>;
 };
@@ -30,12 +37,19 @@ function randomCode(): string {
   return out;
 }
 
+function newDeadline(seconds: number): number {
+  return Date.now() + Math.max(5, seconds) * 1000;
+}
+
 export function createLiveSession(): LiveSessionState {
   let code = randomCode();
   while (store.has(code)) code = randomCode();
+  const seconds = DEFAULT_QUESTION_SECONDS;
   const state: LiveSessionState = {
     code,
     questionIndex: 0,
+    secondsPerQuestion: seconds,
+    questionEndsAt: newDeadline(seconds),
     updatedAt: Date.now(),
     players: {},
   };
@@ -58,9 +72,14 @@ export function patchLiveSession(
   let nextIdx = cur.questionIndex;
   if (action === "next") nextIdx = Math.min(cur.questionIndex + 1, maxIndex);
   else nextIdx = Math.max(cur.questionIndex - 1, 0);
+  const indexChanged = nextIdx !== cur.questionIndex;
+  const questionEndsAt = indexChanged
+    ? newDeadline(cur.secondsPerQuestion)
+    : cur.questionEndsAt;
   const updated: LiveSessionState = {
     ...cur,
     questionIndex: nextIdx,
+    questionEndsAt,
     updatedAt: Date.now(),
     players: { ...cur.players },
   };
@@ -125,6 +144,14 @@ export function submitLiveAnswer(
   const q = questions[qIdx];
   if (!q)
     return { ok: false, error: "No active question for this session", status: 400 };
+
+  if (Date.now() > session.questionEndsAt) {
+    return {
+      ok: false,
+      error: "Tijd is om voor deze vraag",
+      status: 403,
+    };
+  }
 
   if (
     typeof optionIndex !== "number" ||
