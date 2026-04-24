@@ -29,7 +29,7 @@ const tileSurface = (idx: number) =>
 function QuizScreenShell({ children }: { children: React.ReactNode }) {
   return (
     <div
-      className="flex min-h-dvh flex-1 flex-col items-center justify-center px-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))]"
+      className="quiz-player-light flex min-h-dvh flex-1 flex-col items-center justify-center bg-background px-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] text-foreground"
     >
       {children}
     </div>
@@ -76,7 +76,7 @@ export function QuizClient({ initialQuestions }: Props) {
   if (questions.length === 0) {
     return (
       <QuizScreenShell>
-        <Card className="w-full max-w-md border border-white/10 bg-card/95 text-center shadow-xl ring-1 ring-white/5 backdrop-blur-sm">
+        <Card className="w-full max-w-md border border-border bg-card/95 text-center shadow-xl ring-1 ring-black/[0.04] backdrop-blur-sm">
           <CardContent className="flex flex-col items-center gap-5 pt-10 pb-8">
             <div className="text-5xl" aria-hidden>
               💍
@@ -93,7 +93,7 @@ export function QuizClient({ initialQuestions }: Props) {
   if (screen === "join") {
     return (
       <QuizScreenShell>
-        <Card className="w-full max-w-md border border-white/10 bg-card/95 text-center shadow-xl ring-1 ring-white/5 backdrop-blur-sm">
+        <Card className="w-full max-w-md border border-border bg-card/95 text-center shadow-xl ring-1 ring-black/[0.04] backdrop-blur-sm">
           <CardHeader className="gap-2 pb-2">
             <div className="text-5xl" aria-hidden>
               💍
@@ -112,7 +112,7 @@ export function QuizClient({ initialQuestions }: Props) {
               value={name}
               onChange={(e) => setName(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleJoin()}
-              className="h-12 min-h-12 border-white/15 bg-input/40 text-center text-base"
+              className="h-12 min-h-12 border-border bg-input/50 text-center text-base"
               autoFocus
               maxLength={24}
             />
@@ -138,7 +138,7 @@ export function QuizClient({ initialQuestions }: Props) {
 
     return (
       <QuizScreenShell>
-        <Card className="w-full max-w-md border border-white/10 bg-card/95 shadow-xl ring-1 ring-white/5 backdrop-blur-sm">
+        <Card className="w-full max-w-md border border-border bg-card/95 shadow-xl ring-1 ring-black/[0.04] backdrop-blur-sm">
           <CardHeader className="gap-3 pb-2">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <Badge variant="secondary" className="text-xs font-semibold">
@@ -146,12 +146,12 @@ export function QuizClient({ initialQuestions }: Props) {
               </Badge>
               <Badge
                 variant="outline"
-                className="quiz-score-nums border-white/20 text-sm font-semibold tabular-nums"
+                className="quiz-score-nums border-border text-sm font-semibold tabular-nums"
               >
                 {score} punten
               </Badge>
             </div>
-            <Progress value={progress} className="h-2 gap-0 [&_[data-slot=progress-track]]:h-2 [&_[data-slot=progress-track]]:bg-white/10 [&_[data-slot=progress-indicator]]:bg-gradient-to-r [&_[data-slot=progress-indicator]]:from-primary [&_[data-slot=progress-indicator]]:to-chart-2" />
+            <Progress value={progress} className="h-2 gap-0 [&_[data-slot=progress-track]]:h-2 [&_[data-slot=progress-track]]:bg-muted [&_[data-slot=progress-indicator]]:bg-gradient-to-r [&_[data-slot=progress-indicator]]:from-primary [&_[data-slot=progress-indicator]]:to-chart-2" />
             <h2 className="quiz-display-title text-balance text-foreground">
               {q.question}
             </h2>
@@ -175,12 +175,13 @@ export function QuizClient({ initialQuestions }: Props) {
                     disabled={showResult}
                     onClick={() => handleAnswer(idx)}
                     className={cn(
-                      "flex min-h-[88px] flex-col items-stretch justify-between gap-2 rounded-[20px] border-2 border-transparent px-3 py-3 text-left text-base font-semibold leading-snug shadow-md transition-all outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 disabled:cursor-default",
-                      "motion-safe:active:scale-[0.99]",
+                      "flex min-h-[88px] flex-col items-stretch justify-between gap-2 rounded-[20px] border-2 border-transparent px-3 py-3 text-left text-base font-semibold leading-snug shadow-md transition-[transform,box-shadow,opacity,filter] duration-200 ease-out outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 disabled:cursor-default",
+                      "motion-safe:active:scale-[0.99] motion-reduce:active:scale-100",
                       base,
-                      !showResult && "hover:brightness-110 motion-safe:hover:scale-[1.02]",
+                      !showResult &&
+                        "hover:brightness-110 motion-safe:hover:scale-[1.02] motion-reduce:hover:scale-100",
                       isCorrect &&
-                        "border-quiz-correct ring-2 ring-quiz-correct motion-safe:scale-[1.02]",
+                        "border-quiz-correct ring-2 ring-quiz-correct motion-safe:scale-[1.02] motion-reduce:scale-100",
                       isWrongPick &&
                         "border-quiz-incorrect opacity-95 ring-2 ring-quiz-incorrect",
                       isDimmed && "opacity-40 saturate-75"
@@ -233,7 +234,7 @@ export function QuizClient({ initialQuestions }: Props) {
 
     return (
       <QuizScreenShell>
-        <Card className="w-full max-w-md border border-white/10 bg-card/95 text-center shadow-xl ring-1 ring-white/5 backdrop-blur-sm">
+        <Card className="w-full max-w-md border border-border bg-card/95 text-center shadow-xl ring-1 ring-black/[0.04] backdrop-blur-sm">
           <CardHeader className="gap-2">
             <div className="text-6xl" aria-hidden>
               {emoji}

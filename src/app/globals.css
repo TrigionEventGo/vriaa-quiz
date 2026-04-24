@@ -58,7 +58,7 @@
 }
 
 :root {
-  /* Party quiz — dark festive base (VRIAA-10 ux-spec) */
+  /* Party quiz — dark festive base (host/admin; VRIAA-10). Player flows override via .quiz-player-light (VRIAA-17). */
   --font-display: var(--font-nunito), ui-sans-serif, system-ui, sans-serif;
   --background: #0f0a1a;
   --foreground: #f5f5f7;
@@ -101,6 +101,37 @@
   --quiz-correct: #69f0ae;
   --quiz-incorrect: #ff8a80;
   --quiz-gold: #ffd54f;
+}
+
+/* Light-first player flows (VRIAA-17) — scope tokens under this wrapper */
+.quiz-player-light {
+  --background: #f6f3fb;
+  --foreground: #1a1228;
+  --card: #ffffff;
+  --card-foreground: #1a1228;
+  --popover: #ffffff;
+  --popover-foreground: #1a1228;
+  --primary: #7c3aed;
+  --primary-foreground: #faf8ff;
+  --secondary: rgba(26, 18, 40, 0.06);
+  --secondary-foreground: #1a1228;
+  --muted: rgba(26, 18, 40, 0.06);
+  --muted-foreground: #5b4d6e;
+  --accent: rgba(124, 58, 237, 0.12);
+  --accent-foreground: #1a1228;
+  --destructive: #c62828;
+  --border: rgba(26, 18, 40, 0.12);
+  --input: rgba(26, 18, 40, 0.1);
+  --ring: #7c3aed;
+  /* Saturated tiles for contrast on light surfaces */
+  --quiz-tile-a: #0d47a1;
+  --quiz-tile-b: #b71c1c;
+  --quiz-tile-c: #f9a825;
+  --quiz-tile-d: #1b5e20;
+  --quiz-tile-c-fg: #3e2723;
+  --quiz-correct: #00897b;
+  --quiz-incorrect: #d84315;
+  --quiz-gold: #f57f17;
 }
 
 @layer base {

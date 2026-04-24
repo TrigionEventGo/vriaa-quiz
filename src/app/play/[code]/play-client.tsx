@@ -11,6 +11,9 @@ import { cn } from "@/lib/utils";
 
 const TILE_LABELS = ["A", "B", "C", "D"] as const;
 
+const PLAYER_SURFACE =
+  "quiz-player-light min-h-dvh bg-background text-foreground";
+
 const tileSurface = (idx: number) =>
   [
     "bg-quiz-tile-a text-white",
@@ -67,6 +70,7 @@ export function PlayClient({ code }: { code: string }) {
   const [lastSubmit, setLastSubmit] = useState<{
     points: 0 | 1;
   } | null>(null);
+  const [pickedIndex, setPickedIndex] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
 
@@ -189,7 +193,11 @@ export function PlayClient({ code }: { code: string }) {
   useEffect(() => {
     if (!session) return;
     const answered = session.player.answeredCurrent;
-    if (!answered) startTransition(() => setLastSubmit(null));
+    if (!answered)
+      startTransition(() => {
+        setLastSubmit(null);
+        setPickedIndex(null);
+      });
   }, [session, session?.questionIndex, session?.player.answeredCurrent]);
 
   async function handleJoin() {
@@ -241,6 +249,7 @@ export function PlayClient({ code }: { code: string }) {
         setError(body.error ?? `Antwoord versturen mislukt (${res.status})`);
         return;
       }
+      setPickedIndex(optionIndex);
       if (typeof body.pointsThisQuestion === "number") {
         setLastSubmit({ points: body.pointsThisQuestion });
       }
@@ -255,7 +264,12 @@ export function PlayClient({ code }: { code: string }) {
 
   if (error && !session && !playerId) {
     return (
-      <div className="flex min-h-dvh flex-col items-center justify-center gap-4 px-4">
+      <div
+        className={cn(
+          PLAYER_SURFACE,
+          "flex flex-col items-center justify-center gap-4 px-4"
+        )}
+      >
         <p className="text-center text-destructive">{error}</p>
         <Button type="button" variant="outline" onClick={() => setError(null)}>
           Opnieuw
@@ -266,7 +280,7 @@ export function PlayClient({ code }: { code: string }) {
 
   if (!questions) {
     return (
-      <div className="flex min-h-dvh items-center justify-center px-4">
+      <div className={cn(PLAYER_SURFACE, "flex items-center justify-center px-4")}>
         <p className="text-muted-foreground">Laden…</p>
       </div>
     );
@@ -274,7 +288,7 @@ export function PlayClient({ code }: { code: string }) {
 
   if (questions.length === 0) {
     return (
-      <div className="flex min-h-dvh items-center justify-center px-4">
+      <div className={cn(PLAYER_SURFACE, "flex items-center justify-center px-4")}>
         <p className="max-w-md text-center text-muted-foreground">
           Er zijn nog geen vragen. De quizmaster moet eerst vragen toevoegen via het beheer.
         </p>
@@ -284,8 +298,13 @@ export function PlayClient({ code }: { code: string }) {
 
   if (!playerId) {
     return (
-      <div className="flex min-h-dvh flex-col items-center justify-center px-4 py-8">
-        <Card className="w-full max-w-md border border-white/10 bg-card/95 shadow-xl ring-1 ring-white/5 backdrop-blur-sm">
+      <div
+        className={cn(
+          PLAYER_SURFACE,
+          "flex flex-col items-center justify-center px-4 py-8"
+        )}
+      >
+        <Card className="w-full max-w-md border border-border bg-card/95 shadow-xl ring-1 ring-black/[0.04] backdrop-blur-sm">
           <CardHeader className="gap-2 pb-2">
             <Badge variant="secondary" className="w-fit text-xs font-semibold">
               Live · code {codeKey}
@@ -302,7 +321,7 @@ export function PlayClient({ code }: { code: string }) {
               value={nickname}
               onChange={(e) => setNickname(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && void handleJoin()}
-              className="h-12 min-h-12 border-white/15 bg-input/40 text-center text-base"
+              className="h-12 min-h-12 border-border bg-input/50 text-center text-base"
               autoFocus
               maxLength={24}
             />
@@ -323,7 +342,7 @@ export function PlayClient({ code }: { code: string }) {
 
   if (!session) {
     return (
-      <div className="flex min-h-dvh items-center justify-center px-4">
+      <div className={cn(PLAYER_SURFACE, "flex items-center justify-center px-4")}>
         <p className="text-muted-foreground">Sessie laden…</p>
       </div>
     );
@@ -333,8 +352,13 @@ export function PlayClient({ code }: { code: string }) {
     const w = session.winner;
     const iWon = w ? w.nicknames.includes(session.player.nickname) : false;
     return (
-      <div className="flex min-h-dvh flex-col items-center justify-center px-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] py-6">
-        <Card className="w-full max-w-md border border-white/10 bg-card/95 text-center shadow-xl ring-1 ring-white/5 backdrop-blur-sm">
+      <div
+        className={cn(
+          PLAYER_SURFACE,
+          "flex flex-col items-center justify-center px-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] py-6"
+        )}
+      >
+        <Card className="w-full max-w-md border border-border bg-card/95 text-center shadow-xl ring-1 ring-black/[0.04] backdrop-blur-sm">
           <CardHeader className="gap-2 pb-2">
             <Badge variant="secondary" className="mx-auto w-fit text-xs font-semibold">
               Live · afgelopen
@@ -368,7 +392,7 @@ export function PlayClient({ code }: { code: string }) {
                 Er was nog geen scorebord (geen deelnemers of nog geen antwoorden).
               </p>
             )}
-            <div className="w-full rounded-xl border border-white/10 bg-muted/15 p-4">
+            <div className="w-full rounded-xl border border-border bg-muted/15 p-4">
               <p className="text-sm text-muted-foreground">Jouw score</p>
               <p className="quiz-score-nums text-3xl font-extrabold tabular-nums text-foreground">
                 {session.player.totalPoints}
@@ -385,7 +409,7 @@ export function PlayClient({ code }: { code: string }) {
               </p>
             </div>
             {session.standingsTop.length > 0 && (
-              <div className="w-full rounded-xl border border-white/10 bg-muted/15 p-3">
+              <div className="w-full rounded-xl border border-border bg-muted/15 p-3">
                 <p className="mb-2 text-center text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   Top {Math.min(8, session.standingsTop.length)}
                 </p>
@@ -428,10 +452,16 @@ export function PlayClient({ code }: { code: string }) {
   const lockedOut = session.timerLocked || secondsLeft(session.questionEndsAt) <= 0;
   const canPick = !answered && !answerBusy && !lockedOut;
   const left = secondsLeft(session.questionEndsAt);
+  const showReveal = answered && pickedIndex !== null;
 
   return (
-    <div className="flex min-h-dvh flex-col items-center justify-center px-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] py-6">
-      <Card className="w-full max-w-md border border-white/10 bg-card/95 shadow-xl ring-1 ring-white/5 backdrop-blur-sm">
+    <div
+      className={cn(
+        PLAYER_SURFACE,
+        "flex flex-col items-center justify-center px-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] py-6"
+      )}
+    >
+      <Card className="w-full max-w-md border border-border bg-card/95 shadow-xl ring-1 ring-black/[0.04] backdrop-blur-sm">
         <CardHeader className="gap-2 pb-2" data-tick={tick}>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <Badge variant="secondary" className="text-xs font-semibold">
@@ -439,7 +469,7 @@ export function PlayClient({ code }: { code: string }) {
             </Badge>
             <Badge
               variant="outline"
-              className="quiz-score-nums border-white/20 text-sm font-semibold tabular-nums"
+              className="quiz-score-nums border-border text-sm font-semibold tabular-nums"
             >
               {session.player.totalPoints} punten
             </Badge>
@@ -462,18 +492,32 @@ export function PlayClient({ code }: { code: string }) {
         <CardContent>
           {error && <p className="mb-3 text-sm text-destructive">{error}</p>}
           <div className="grid grid-cols-2 gap-3">
-            {q.options.map((option, optIdx) => (
+            {q.options.map((option, optIdx) => {
+              const isCorrect = showReveal && optIdx === q.correct;
+              const isWrongPick =
+                showReveal && optIdx === pickedIndex && optIdx !== q.correct;
+              const isDimmed =
+                showReveal && optIdx !== q.correct && optIdx !== pickedIndex;
+
+              return (
               <button
                 key={optIdx}
                 type="button"
                 disabled={!canPick}
                 onClick={() => void submitAnswer(optIdx)}
                 className={cn(
-                  "flex min-h-[88px] flex-col items-stretch justify-between gap-2 rounded-[20px] border-2 border-transparent px-3 py-3 text-left text-base font-semibold leading-snug shadow-md transition-all outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60",
-                  "motion-safe:active:scale-[0.99]",
+                  "flex min-h-[88px] flex-col items-stretch justify-between gap-2 rounded-[20px] border-2 border-transparent px-3 py-3 text-left text-base font-semibold leading-snug shadow-md transition-[transform,box-shadow,opacity,filter] duration-200 ease-out outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60",
+                  "motion-safe:active:scale-[0.99] motion-reduce:active:scale-100",
                   tileSurface(optIdx),
-                  canPick && "hover:brightness-110 motion-safe:hover:scale-[1.02]",
-                  !canPick && "cursor-default opacity-90"
+                  canPick &&
+                    "hover:brightness-110 motion-safe:hover:scale-[1.02] motion-reduce:hover:scale-100",
+                  isCorrect &&
+                    "border-quiz-correct ring-2 ring-quiz-correct motion-safe:scale-[1.02] motion-reduce:scale-100",
+                  isWrongPick &&
+                    "border-quiz-incorrect opacity-95 ring-2 ring-quiz-incorrect",
+                  isDimmed && "opacity-40 saturate-75",
+                  !canPick && !showReveal && "cursor-default opacity-90",
+                  showReveal && "cursor-default"
                 )}
               >
                 <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-black/20 text-xs font-extrabold text-inherit">
@@ -481,7 +525,8 @@ export function PlayClient({ code }: { code: string }) {
                 </span>
                 <span className="text-pretty">{option}</span>
               </button>
-            ))}
+            );
+            })}
           </div>
           <p className="mt-4 text-center text-sm text-muted-foreground">
             {answerBusy && "Antwoord verzenden…"}
@@ -495,7 +540,7 @@ export function PlayClient({ code }: { code: string }) {
             {!answerBusy && !answered && !lockedOut && "Tik op een antwoord. Je ziet daarna of het goed was."}
           </p>
           {session.standingsTop.length > 0 && (answered || lockedOut) && (
-            <div className="mt-4 rounded-xl border border-white/10 bg-muted/15 p-3">
+            <div className="mt-4 rounded-xl border border-border bg-muted/15 p-3">
               <p className="mb-2 text-center text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Top {Math.min(8, session.standingsTop.length)}
               </p>
