@@ -32,7 +32,7 @@ Voor een party-build op **één** Node-proces (typisch `next start` op één mac
 
 1. Inloggen op `/admin`.
 2. **Live sessie (host)** — maakt een code en opent `/host/<CODE>`.
-3. Deelnemers openen `/play/<CODE>`, vullen een naam in (`POST .../players`), en antwoorden per vraag (`POST .../answer`); UI poll’t elke ~2s voor host-index + score. Per vraag is er een **server-side timer** (standaard 25s, `DEFAULT_QUESTION_SECONDS` in code); na afloop worden geen nieuwe antwoorden meer geaccepteerd.
+3. Deelnemers openen `/play/<CODE>`, vullen een naam in (`POST .../players`), en antwoorden per vraag (`POST .../answer`); **SSE** (`GET .../events`) triggert snelle updates; er blijft een langzamere **fallback-poll** als vangnet. Per vraag is er een **server-side timer** (standaard 25s, `DEFAULT_QUESTION_SECONDS` in code); na afloop worden geen nieuwe antwoorden meer geaccepteerd.
 4. Host gebruikt *Volgende* / *Vorige* om de vraag te wisselen (start een nieuwe timer).
 5. Op de **laatste vraag** tikt de host **Quiz afronden** — spelers zien daarna een **afsluitscherm** met de **winnaar(s)** (ex aequo = meerdere namen), eigen score en top 8. **Vorige** op het hostscherm opent de laatste vraag weer.
 
@@ -54,6 +54,16 @@ npm test        # unit tests (o.a. scoring)
 1. Repo koppelen aan Vercel; root = deze app.
 2. Zet `QUIZ_ADMIN_TOKEN` in Vercel → Settings → Environment Variables (Production + Preview).
 3. Deploy; test `/admin` login en een vraag opslaan.
+
+## Party — korte runbook (Phase 4)
+
+Gebruik deze checklist op de avond zelf (één Node/Vercel-instance met live state):
+
+1. **Vooraf (≥1 dag):** production-deploy gedaan; `QUIZ_ADMIN_TOKEN` gezet; korte test met **2 telefoons + host** (zelfde WiFi als op locatie, indien mogelijk).
+2. **15 min voor start:** host logt in op `/admin`, controleert vragen, start **Live sessie**, deelt **code** + deelnemerlink `/play/<CODE>` (bijv. in WhatsApp).
+3. **Fallback:** bij totale uitval van de app kan de quizmaster **mondeling** of met **pen en papier** verder (geen code-wijziging nodig); optioneel statische slides als plan B.
+4. **Tijdens:** host blijft op **één** hostscherm; niet tegelijk dezelfde live sessie op meerdere servers verwachten (in-memory state).
+5. **Na afloop:** optioneel vragen opnieuw exporteren via admin (browser) of `data/quiz-questions.json` op de server bewaren.
 
 ## Paperclip / roadmap
 

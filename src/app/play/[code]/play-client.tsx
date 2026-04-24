@@ -483,7 +483,9 @@ export function PlayClient({ code }: { code: string }) {
   const lockedOut = session.timerLocked || secondsLeft(session.questionEndsAt) <= 0;
   const canPick = !answered && !answerBusy && !lockedOut;
   const left = secondsLeft(session.questionEndsAt);
-  const showReveal = answered && pickedIndex !== null;
+  const showPickedResult = answered && pickedIndex !== null;
+  const showCorrectAfterLock = lockedOut && !answered;
+  const highlightCorrect = showPickedResult || showCorrectAfterLock;
 
   return (
     <div
@@ -505,7 +507,11 @@ export function PlayClient({ code }: { code: string }) {
               {session.player.totalPoints} punten
             </Badge>
           </div>
-          <p className="text-center text-sm text-muted-foreground">
+          <p
+            role="status"
+            aria-live="polite"
+            className="text-center text-sm text-muted-foreground"
+          >
             {lockedOut ? (
               <span className="font-medium text-destructive">Tijd is om</span>
             ) : (
@@ -524,11 +530,13 @@ export function PlayClient({ code }: { code: string }) {
           {error && <p className="mb-3 text-sm text-destructive">{error}</p>}
           <div className="grid grid-cols-2 gap-3">
             {q.options.map((option, optIdx) => {
-              const isCorrect = showReveal && optIdx === q.correct;
+              const isCorrect = highlightCorrect && optIdx === q.correct;
               const isWrongPick =
-                showReveal && optIdx === pickedIndex && optIdx !== q.correct;
+                showPickedResult && optIdx === pickedIndex && optIdx !== q.correct;
               const isDimmed =
-                showReveal && optIdx !== q.correct && optIdx !== pickedIndex;
+                highlightCorrect &&
+                !isCorrect &&
+                !(showPickedResult && optIdx === pickedIndex);
 
               return (
               <button
@@ -547,8 +555,8 @@ export function PlayClient({ code }: { code: string }) {
                   isWrongPick &&
                     "border-quiz-incorrect opacity-95 ring-2 ring-quiz-incorrect",
                   isDimmed && "opacity-40 saturate-75",
-                  !canPick && !showReveal && "cursor-default opacity-90",
-                  showReveal && "cursor-default"
+                  !canPick && !highlightCorrect && "cursor-default opacity-90",
+                  highlightCorrect && "cursor-default"
                 )}
               >
                 <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-black/20 text-xs font-extrabold text-inherit">
@@ -559,6 +567,12 @@ export function PlayClient({ code }: { code: string }) {
             );
             })}
           </div>
+          {highlightCorrect && (
+            <p className="mt-3 text-center text-sm text-pretty">
+              <span className="text-muted-foreground">Juiste antwoord: </span>
+              <span className="font-semibold text-quiz-correct">{q.options[q.correct]}</span>
+            </p>
+          )}
           <p className="mt-4 text-center text-sm text-muted-foreground">
             {answerBusy && "Antwoord verzenden…"}
             {!answerBusy && answered && lastSubmit && (

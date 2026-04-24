@@ -166,7 +166,12 @@ export function HostControl({ code }: { code: string }) {
                 ) : null}
               </p>
               {typeof state.questionEndsAt === "number" && (
-                <p className="text-sm text-muted-foreground" data-tick={tick}>
+                <p
+                  role="status"
+                  aria-live="polite"
+                  className="text-sm text-muted-foreground"
+                  data-tick={tick}
+                >
                   Timer:{" "}
                   <span className="font-mono font-semibold text-foreground tabular-nums">
                     {state.timerLocked || formatSecondsLeft(state.questionEndsAt) <= 0
