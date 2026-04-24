@@ -23,13 +23,17 @@ function storageKey(code: string) {
   return `vriaa-quiz-player:${code.trim().toUpperCase()}`;
 }
 
+type WinnerDto = { totalPoints: number; nicknames: string[] };
+
 type SessionBase = {
   questionIndex: number;
   totalQuestions: number;
   secondsPerQuestion: number;
   questionEndsAt: number;
   timerLocked: boolean;
+  sessionFinished: boolean;
   standingsTop: { nickname: string; totalPoints: number }[];
+  winner: WinnerDto | null;
 };
 
 type SessionWithPlayer = SessionBase & {
@@ -42,6 +46,13 @@ type SessionWithPlayer = SessionBase & {
 
 function secondsLeft(endsAt: number): number {
   return Math.max(0, Math.ceil((endsAt - Date.now()) / 1000));
+}
+
+function joinNamesDutch(names: string[]): string {
+  if (names.length === 0) return "";
+  if (names.length === 1) return names[0]!;
+  if (names.length === 2) return `${names[0]} en ${names[1]}`;
+  return `${names.slice(0, -1).join(", ")} en ${names.at(-1)!}`;
 }
 
 export function PlayClient({ code }: { code: string }) {
@@ -91,13 +102,23 @@ export function PlayClient({ code }: { code: string }) {
       if (!parsed.player) {
         throw new Error("Sessie-antwoord onvolledig.");
       }
+      const rawWinner = parsed.winner as WinnerDto | null | undefined;
+      const winner =
+        rawWinner &&
+        typeof rawWinner.totalPoints === "number" &&
+        Array.isArray(rawWinner.nicknames)
+          ? rawWinner
+          : null;
+
       const body: SessionWithPlayer = {
         questionIndex: parsed.questionIndex ?? 0,
         totalQuestions: parsed.totalQuestions ?? 0,
         secondsPerQuestion: parsed.secondsPerQuestion ?? 25,
         questionEndsAt: parsed.questionEndsAt ?? Date.now(),
         timerLocked: parsed.timerLocked ?? false,
+        sessionFinished: Boolean(parsed.sessionFinished),
         standingsTop: Array.isArray(parsed.standingsTop) ? parsed.standingsTop : [],
+        winner,
         player: parsed.player,
       };
       return { kind: "ok" as const, body };
@@ -300,6 +321,99 @@ export function PlayClient({ code }: { code: string }) {
     return (
       <div className="flex min-h-dvh items-center justify-center px-4">
         <p className="text-muted-foreground">Sessie laden…</p>
+      </div>
+    );
+  }
+
+  if (session.sessionFinished) {
+    const w = session.winner;
+    const iWon = w ? w.nicknames.includes(session.player.nickname) : false;
+    return (
+      <div className="flex min-h-dvh flex-col items-center justify-center px-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] py-6">
+        <Card className="w-full max-w-md border border-white/10 bg-card/95 text-center shadow-xl ring-1 ring-white/5 backdrop-blur-sm">
+          <CardHeader className="gap-2 pb-2">
+            <Badge variant="secondary" className="mx-auto w-fit text-xs font-semibold">
+              Live · afgelopen
+            </Badge>
+            <div className="text-5xl" aria-hidden>
+              🏆
+            </div>
+            <h2 className="quiz-display-title text-balance text-2xl font-extrabold text-foreground">
+              De quiz is afgelopen
+            </h2>
+          </CardHeader>
+          <CardContent className="flex flex-col items-center gap-4">
+            {w && w.nicknames.length > 0 ? (
+              <>
+                <p className="text-lg text-muted-foreground">
+                  {w.nicknames.length === 1 ? "Winnaar" : "Winnaars"} (
+                  <span className="quiz-score-nums font-semibold text-foreground tabular-nums">
+                    {w.totalPoints}
+                  </span>{" "}
+                  {w.totalPoints === 1 ? "punt" : "punten"}):
+                </p>
+                <p className="text-xl font-bold text-foreground">{joinNamesDutch(w.nicknames)}</p>
+                {iWon && (
+                  <p className="text-base font-semibold text-primary">
+                    Gefeliciteerd — jij hoort bij de winnaars!
+                  </p>
+                )}
+              </>
+            ) : (
+              <p className="text-muted-foreground">
+                Er was nog geen scorebord (geen deelnemers of nog geen antwoorden).
+              </p>
+            )}
+            <div className="w-full rounded-xl border border-white/10 bg-muted/15 p-4">
+              <p className="text-sm text-muted-foreground">Jouw score</p>
+              <p className="quiz-score-nums text-3xl font-extrabold tabular-nums text-foreground">
+                {session.player.totalPoints}
+                {session.totalQuestions > 0 ? (
+                  <span className="text-lg font-semibold text-muted-foreground">
+                    {" "}
+                    / {session.totalQuestions}
+                  </span>
+                ) : null}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                <span className="font-medium text-foreground">{session.player.nickname}</span> ·{" "}
+                <span className="font-mono">{codeKey}</span>
+              </p>
+            </div>
+            {session.standingsTop.length > 0 && (
+              <div className="w-full rounded-xl border border-white/10 bg-muted/15 p-3">
+                <p className="mb-2 text-center text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Top {Math.min(8, session.standingsTop.length)}
+                </p>
+                <ol className="space-y-1 text-sm">
+                  {session.standingsTop.map((row, i) => (
+                    <li
+                      key={`${row.nickname}-${i}`}
+                      className="flex justify-between gap-2 tabular-nums text-muted-foreground"
+                    >
+                      <span>
+                        {i + 1}.{" "}
+                        <span
+                          className={
+                            row.nickname === session.player.nickname
+                              ? "font-semibold text-foreground"
+                              : ""
+                          }
+                        >
+                          {row.nickname}
+                        </span>
+                      </span>
+                      <span className="quiz-score-nums font-medium">{row.totalPoints}</span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            )}
+            <p className="text-center text-xs text-muted-foreground">
+              Je kunt dit venster sluiten. Bedankt voor het meedoen!
+            </p>
+          </CardContent>
+        </Card>
       </div>
     );
   }

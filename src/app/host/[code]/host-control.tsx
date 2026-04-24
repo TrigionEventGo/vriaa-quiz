@@ -25,6 +25,8 @@ type SessionDto = {
   secondsPerQuestion?: number;
   questionEndsAt?: number;
   timerLocked?: boolean;
+  sessionFinished?: boolean;
+  winner?: { totalPoints: number; nicknames: string[] };
   leaderboard?: LeaderRow[];
 };
 
@@ -147,12 +149,27 @@ export function HostControl({ code }: { code: string }) {
                   </span>
                 </p>
               )}
+              {state.sessionFinished && (
+                <p className="rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-sm text-foreground">
+                  Quiz afgelopen — spelers zien de winnaar(s). Tik <strong>Vorige</strong> om de
+                  laatste vraag weer te openen als dat nodig is.
+                </p>
+              )}
               <div className="flex flex-wrap gap-2">
                 <Button type="button" variant="outline" onClick={() => void patch("prev")}>
                   Vorige
                 </Button>
-                <Button type="button" onClick={() => void patch("next")}>
-                  Volgende
+                <Button
+                  type="button"
+                  disabled={Boolean(state.sessionFinished)}
+                  onClick={() => void patch("next")}
+                >
+                  {state.sessionFinished
+                    ? "Quiz is afgelopen"
+                    : state.totalQuestions > 0 &&
+                        state.questionIndex >= state.totalQuestions - 1
+                      ? "Quiz afronden"
+                      : "Volgende"}
                 </Button>
                 <Button type="button" variant="secondary" onClick={() => void refresh()}>
                   Vernieuwen

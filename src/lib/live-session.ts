@@ -20,6 +20,11 @@ export type LiveSessionState = {
   /** When answers for `questionIndex` stop scoring (server-enforced). */
   questionEndsAt: number;
   updatedAt: number;
+  /**
+   * Set when the host taps "Volgende" on the last question — live run ended;
+   * players should see final winner(s). "Vorige" clears this to reopen the last vraag.
+   */
+  sessionFinished: boolean;
   players: Record<string, LivePlayer>;
 };
 
@@ -51,6 +56,7 @@ export function createLiveSession(): LiveSessionState {
     secondsPerQuestion: seconds,
     questionEndsAt: newDeadline(seconds),
     updatedAt: Date.now(),
+    sessionFinished: false,
     players: {},
   };
   store.set(code, state);
@@ -69,17 +75,59 @@ export function patchLiveSession(
   const key = code.trim().toUpperCase();
   const cur = store.get(key);
   if (!cur) return null;
-  let nextIdx = cur.questionIndex;
-  if (action === "next") nextIdx = Math.min(cur.questionIndex + 1, maxIndex);
-  else nextIdx = Math.max(cur.questionIndex - 1, 0);
-  const indexChanged = nextIdx !== cur.questionIndex;
-  const questionEndsAt = indexChanged
-    ? newDeadline(cur.secondsPerQuestion)
-    : cur.questionEndsAt;
+
+  if (action === "prev") {
+    if (cur.sessionFinished) {
+      const updated: LiveSessionState = {
+        ...cur,
+        sessionFinished: false,
+        questionIndex: maxIndex,
+        questionEndsAt: newDeadline(cur.secondsPerQuestion),
+        updatedAt: Date.now(),
+        players: { ...cur.players },
+      };
+      store.set(key, updated);
+      return updated;
+    }
+    const nextIdx = Math.max(cur.questionIndex - 1, 0);
+    const indexChanged = nextIdx !== cur.questionIndex;
+    const questionEndsAt = indexChanged
+      ? newDeadline(cur.secondsPerQuestion)
+      : cur.questionEndsAt;
+    const updated: LiveSessionState = {
+      ...cur,
+      questionIndex: nextIdx,
+      questionEndsAt,
+      updatedAt: Date.now(),
+      players: { ...cur.players },
+    };
+    store.set(key, updated);
+    return updated;
+  }
+
+  // next
+  if (cur.sessionFinished) {
+    return {
+      ...cur,
+      updatedAt: Date.now(),
+      players: { ...cur.players },
+    };
+  }
+  if (cur.questionIndex >= maxIndex) {
+    const updated: LiveSessionState = {
+      ...cur,
+      sessionFinished: true,
+      updatedAt: Date.now(),
+      players: { ...cur.players },
+    };
+    store.set(key, updated);
+    return updated;
+  }
+  const nextIdx = cur.questionIndex + 1;
   const updated: LiveSessionState = {
     ...cur,
     questionIndex: nextIdx,
-    questionEndsAt,
+    questionEndsAt: newDeadline(cur.secondsPerQuestion),
     updatedAt: Date.now(),
     players: { ...cur.players },
   };
@@ -136,6 +184,13 @@ export function submitLiveAnswer(
   const key = code.trim().toUpperCase();
   const session = store.get(key);
   if (!session) return { ok: false, error: "Session not found", status: 404 };
+  if (session.sessionFinished) {
+    return {
+      ok: false,
+      error: "De quiz is afgelopen — antwoorden tellen niet meer",
+      status: 403,
+    };
+  }
   const player = session.players[playerId];
   if (!player)
     return { ok: false, error: "Unknown player — join again", status: 404 };

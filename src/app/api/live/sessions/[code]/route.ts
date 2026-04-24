@@ -37,7 +37,28 @@ export async function GET(request: Request, context: RouteContext) {
     secondsPerQuestion: session.secondsPerQuestion,
     questionEndsAt: session.questionEndsAt,
     timerLocked,
+    sessionFinished: session.sessionFinished,
   };
+
+  const allStandings = Object.values(session.players)
+    .map((p) => ({
+      nickname: p.nickname,
+      totalPoints: totalScoreFromAnswerMap(questions, p.answersByQuestion),
+    }))
+    .sort(
+      (a, b) =>
+        b.totalPoints - a.totalPoints || a.nickname.localeCompare(b.nickname, "nl")
+    );
+
+  const winnerDto =
+    session.sessionFinished && allStandings.length > 0
+      ? {
+          totalPoints: allStandings[0]!.totalPoints,
+          nicknames: allStandings
+            .filter((r) => r.totalPoints === allStandings[0]!.totalPoints)
+            .map((r) => r.nickname),
+        }
+      : null;
 
   const standingsTop = Object.values(session.players)
     .map((p) => ({
@@ -60,7 +81,11 @@ export async function GET(request: Request, context: RouteContext) {
       (a, b) =>
         b.totalPoints - a.totalPoints || a.nickname.localeCompare(b.nickname, "nl")
     );
-    return NextResponse.json({ ...base, leaderboard: rows });
+    return NextResponse.json({
+      ...base,
+      leaderboard: rows,
+      ...(winnerDto ? { winner: winnerDto } : {}),
+    });
   }
 
   if (!playerId) {
@@ -87,6 +112,7 @@ export async function GET(request: Request, context: RouteContext) {
       totalPoints,
     },
     standingsTop,
+    ...(winnerDto ? { winner: winnerDto } : {}),
   });
 }
 
@@ -128,5 +154,6 @@ export async function PATCH(request: Request, context: RouteContext) {
     secondsPerQuestion: next.secondsPerQuestion,
     questionEndsAt: next.questionEndsAt,
     timerLocked: now >= next.questionEndsAt,
+    sessionFinished: next.sessionFinished,
   });
 }
