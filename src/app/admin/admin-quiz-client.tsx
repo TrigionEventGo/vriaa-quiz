@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useCallback, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -10,7 +11,12 @@ import { Input } from "@/components/ui/input";
 import type { QuizQuestion } from "@/lib/quiz-types";
 import { cn } from "@/lib/utils";
 
-const TOKEN_KEY = "vriaa-quiz-admin-token";
+const OPTION_TILE_BORDER = [
+  "border-l-quiz-tile-a",
+  "border-l-quiz-tile-b",
+  "border-l-quiz-tile-c",
+  "border-l-quiz-tile-d",
+] as const;
 
 type LocalRow = QuizQuestion & { localId: string };
 
@@ -46,21 +52,25 @@ export type AdminQuizClientProps = {
 };
 
 export function AdminQuizClient({ initialQuestions }: AdminQuizClientProps) {
+  const router = useRouter();
   const [items, setItems] = useState<LocalRow[]>(() =>
     initialQuestions.length ? toRows(initialQuestions) : [emptyRow()]
   );
-  const [token, setToken] = useState("");
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveOk, setSaveOk] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [liveBusy, setLiveBusy] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     setLoadError(null);
     try {
-      const res = await fetch("/api/quiz-questions", { cache: "no-store" });
+      const res = await fetch("/api/quiz-questions", {
+        cache: "no-store",
+        credentials: "include",
+      });
       if (!res.ok) {
         setLoadError(`Laden mislukt (${res.status})`);
         return;
@@ -74,23 +84,15 @@ export function AdminQuizClient({ initialQuestions }: AdminQuizClientProps) {
     }
   }, []);
 
-  function persistToken(next: string) {
-    setToken(next);
-    if (typeof sessionStorage !== "undefined") {
-      sessionStorage.setItem(TOKEN_KEY, next);
-    }
-  }
-
   async function save() {
     setSaving(true);
     setSaveError(null);
     setSaveOk(null);
     try {
-      const headers: HeadersInit = { "Content-Type": "application/json" };
-      if (token.trim()) headers["x-quiz-admin-token"] = token.trim();
       const res = await fetch("/api/quiz-questions", {
         method: "PUT",
-        headers,
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(fromRows(items)),
       });
       const body = (await res.json().catch(() => ({}))) as {
@@ -106,6 +108,40 @@ export function AdminQuizClient({ initialQuestions }: AdminQuizClientProps) {
       setSaveError("Netwerkfout bij opslaan.");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function startLiveSession() {
+    setLiveBusy(true);
+    setSaveError(null);
+    try {
+      const res = await fetch("/api/live/sessions", {
+        method: "POST",
+        credentials: "include",
+      });
+      const body = (await res.json().catch(() => ({}))) as {
+        code?: string;
+        hostPath?: string;
+        error?: string;
+      };
+      if (!res.ok) {
+        setSaveError(body.error ?? `Live sessie starten mislukt (${res.status})`);
+        return;
+      }
+      if (body.hostPath) router.push(body.hostPath);
+    } catch {
+      setSaveError("Netwerkfout bij live sessie.");
+    } finally {
+      setLiveBusy(false);
+    }
+  }
+
+  async function logout() {
+    try {
+      await fetch("/api/admin-session", { method: "DELETE", credentials: "include" });
+    } finally {
+      router.push("/admin/login");
+      router.refresh();
     }
   }
 
@@ -137,51 +173,63 @@ export function AdminQuizClient({ initialQuestions }: AdminQuizClientProps) {
   }
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-2xl flex-col gap-4 p-4 pb-24">
+    <div className="mx-auto flex min-h-dvh max-w-2xl flex-col gap-4 px-[max(1rem,env(safe-area-inset-left))] pb-[max(1.5rem,env(safe-area-inset-bottom))] pr-[max(1rem,env(safe-area-inset-right))] pt-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h1 className="text-2xl font-bold text-primary">Quiz beheer</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="font-heading text-2xl font-extrabold tracking-tight">
+            <span className="bg-gradient-to-r from-primary via-chart-2 to-chart-3 bg-clip-text text-transparent">
+              Quiz beheer
+            </span>
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             Bewerk vragen en antwoorden. Opslaan schrijft naar{" "}
-            <code className="rounded bg-muted px-1">data/quiz-questions.json</code>{" "}
+            <code className="rounded-md border border-white/10 bg-muted/80 px-1.5 py-0.5 text-xs text-foreground">
+              data/quiz-questions.json
+            </code>{" "}
             op de server.
           </p>
         </div>
-        <Link
-          href="/"
-          className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
-        >
-          Naar quiz
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href="/"
+            className={cn(
+              buttonVariants({ variant: "outline", size: "sm" }),
+              "min-h-9 border-white/15 bg-card/50"
+            )}
+          >
+            Naar quiz
+          </Link>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            className="min-h-9"
+            disabled={liveBusy}
+            onClick={() => void startLiveSession()}
+          >
+            {liveBusy ? "Starten…" : "Live sessie (host)"}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="min-h-9 border-white/15"
+            onClick={() => void logout()}
+          >
+            Uitloggen
+          </Button>
+        </div>
       </div>
-
-      <Card className="border-primary/20">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">Beveiliging (optioneel)</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Zet <code className="rounded bg-muted px-1">QUIZ_ADMIN_TOKEN</code> in
-            de omgeving om opslaan te beveiligen. Vul dezelfde waarde hier in; bij
-            wijziging wordt die in{" "}
-            <code className="rounded bg-muted px-1">sessionStorage</code> bewaard.
-          </p>
-        </CardHeader>
-        <CardContent>
-          <Input
-            type="password"
-            autoComplete="off"
-            placeholder="Admin-token (indien geconfigureerd)"
-            value={token}
-            onChange={(e) => persistToken(e.target.value)}
-          />
-        </CardContent>
-      </Card>
 
       {loadError && (
         <p className="text-sm text-destructive">{loadError}</p>
       )}
 
       {items.map((q, index) => (
-        <Card key={q.localId} className="border-primary/15">
+        <Card
+          key={q.localId}
+          className="border border-white/10 bg-card/90 shadow-md ring-1 ring-white/5"
+        >
           <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 space-y-0 pb-2">
             <div className="flex items-center gap-2">
               <Badge variant="secondary">Vraag {index + 1}</Badge>
@@ -221,8 +269,8 @@ export function AdminQuizClient({ initialQuestions }: AdminQuizClientProps) {
               Vraag
               <textarea
                 className={cn(
-                  "mt-1 flex min-h-[4.5rem] w-full rounded-lg border border-input bg-transparent px-2.5 py-2 text-base outline-none transition-colors",
-                  "placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 md:text-sm"
+                  "mt-1 flex min-h-[4.5rem] w-full rounded-lg border border-white/15 bg-input/30 px-2.5 py-2 text-base outline-none transition-colors",
+                  "placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                 )}
                 value={q.question}
                 onChange={(e) =>
@@ -233,10 +281,20 @@ export function AdminQuizClient({ initialQuestions }: AdminQuizClientProps) {
             </label>
             <div className="grid gap-2 sm:grid-cols-2">
               {q.options.map((opt, optIdx) => (
-                <label key={optIdx} className="text-sm font-medium">
-                  <span className="text-muted-foreground">Antwoord {optIdx + 1}</span>
+                <label
+                  key={optIdx}
+                  className={cn(
+                    "text-sm font-medium",
+                    "rounded-lg border border-white/10 bg-card/40 pl-2",
+                    OPTION_TILE_BORDER[optIdx] ?? "border-l-muted",
+                    "border-l-4"
+                  )}
+                >
+                  <span className="pl-1 text-muted-foreground">
+                    Antwoord {optIdx + 1} ({String.fromCharCode(65 + optIdx)})
+                  </span>
                   <Input
-                    className="mt-1"
+                    className="mt-1 border-0 bg-transparent pl-1 text-base focus-visible:ring-0"
                     value={opt}
                     onChange={(e) => {
                       const options = [...q.options];
@@ -253,7 +311,7 @@ export function AdminQuizClient({ initialQuestions }: AdminQuizClientProps) {
               Juiste antwoord
               <select
                 className={cn(
-                  "mt-1 flex h-10 w-full rounded-lg border border-input bg-transparent px-2.5 text-base outline-none md:text-sm",
+                  "mt-1 flex h-10 min-h-10 w-full rounded-lg border border-white/15 bg-input/30 px-2.5 text-base outline-none",
                   "focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                 )}
                 value={q.correct}
@@ -276,15 +334,26 @@ export function AdminQuizClient({ initialQuestions }: AdminQuizClientProps) {
       ))}
 
       <div className="flex flex-wrap gap-2">
-        <Button type="button" variant="secondary" onClick={addQuestion}>
+        <Button
+          type="button"
+          variant="secondary"
+          className="min-h-9"
+          onClick={addQuestion}
+        >
           Nieuwe vraag
         </Button>
-        <Button type="button" onClick={() => void save()} disabled={saving}>
+        <Button
+          type="button"
+          className="min-h-9 font-semibold shadow-md shadow-primary/15"
+          onClick={() => void save()}
+          disabled={saving}
+        >
           {saving ? "Opslaan…" : "Alles opslaan"}
         </Button>
         <Button
           type="button"
           variant="outline"
+          className="min-h-9 border-white/15"
           onClick={() => void load()}
           disabled={loading}
         >
@@ -295,7 +364,9 @@ export function AdminQuizClient({ initialQuestions }: AdminQuizClientProps) {
       {saveError && (
         <p className="text-sm text-destructive">{saveError}</p>
       )}
-      {saveOk && <p className="text-sm text-green-700">{saveOk}</p>}
+      {saveOk && (
+        <p className="text-sm font-medium text-quiz-correct">{saveOk}</p>
+      )}
     </div>
   );
 }

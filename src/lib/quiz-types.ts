@@ -5,6 +5,12 @@ export type QuizQuestion = {
   correct: number;
 };
 
+/** Versioned on-disk / API envelope (Phase 1+); runtime list endpoints stay arrays for now. */
+export type QuizPackV1 = {
+  version: 1;
+  questions: QuizQuestion[];
+};
+
 export function isQuizQuestion(value: unknown): value is QuizQuestion {
   if (!value || typeof value !== "object") return false;
   const v = value as Record<string, unknown>;

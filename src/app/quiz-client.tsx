@@ -1,11 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
-import { Button, buttonVariants } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import type { QuizQuestion } from "@/lib/quiz-types";
@@ -16,6 +15,26 @@ type Screen = "join" | "waiting" | "quiz" | "results";
 type Props = {
   initialQuestions: QuizQuestion[];
 };
+
+const TILE_LABELS = ["A", "B", "C", "D"] as const;
+
+const tileSurface = (idx: number) =>
+  [
+    "bg-quiz-tile-a text-white",
+    "bg-quiz-tile-b text-white",
+    "bg-quiz-tile-c text-quiz-tile-c-fg",
+    "bg-quiz-tile-d text-white",
+  ][idx] ?? "bg-muted text-foreground";
+
+function QuizScreenShell({ children }: { children: React.ReactNode }) {
+  return (
+    <div
+      className="flex min-h-dvh flex-1 flex-col items-center justify-center px-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))]"
+    >
+      {children}
+    </div>
+  );
+}
 
 export function QuizClient({ initialQuestions }: Props) {
   const [questions] = useState<QuizQuestion[]>(initialQuestions);
@@ -56,34 +75,34 @@ export function QuizClient({ initialQuestions }: Props) {
 
   if (questions.length === 0) {
     return (
-      <div className="flex min-h-screen flex-1 flex-col items-center justify-center gap-4 p-4">
-        <p className="text-center text-muted-foreground">
-          Er zijn nog geen quizvragen. Voeg vragen toe in het beheer.
-        </p>
-        <Link
-          href="/admin"
-          className={cn(
-            buttonVariants({ variant: "default", size: "lg" }),
-            "h-12 w-full max-w-md text-lg"
-          )}
-        >
-          Naar beheer
-        </Link>
-      </div>
+      <QuizScreenShell>
+        <Card className="w-full max-w-md border border-white/10 bg-card/95 text-center shadow-xl ring-1 ring-white/5 backdrop-blur-sm">
+          <CardContent className="flex flex-col items-center gap-5 pt-10 pb-8">
+            <div className="text-5xl" aria-hidden>
+              💍
+            </div>
+            <p className="max-w-[40rem] text-pretty text-base text-muted-foreground">
+              Er zijn nog geen quizvragen. Vraag de quizmaster om vragen toe te voegen via het beheerscherm (alleen voor de host).
+            </p>
+          </CardContent>
+        </Card>
+      </QuizScreenShell>
     );
   }
 
   if (screen === "join") {
     return (
-      <div className="flex min-h-screen flex-1 items-center justify-center p-4">
-        <Card className="w-full max-w-md border-primary/20 text-center shadow-lg">
-          <CardHeader className="pb-4">
-            <div className="mb-2 text-5xl">💍</div>
-            <CardTitle className="text-3xl font-bold text-primary">
+      <QuizScreenShell>
+        <Card className="w-full max-w-md border border-white/10 bg-card/95 text-center shadow-xl ring-1 ring-white/5 backdrop-blur-sm">
+          <CardHeader className="gap-2 pb-2">
+            <div className="text-5xl" aria-hidden>
+              💍
+            </div>
+            <h1 className="quiz-display-title bg-gradient-to-r from-primary via-chart-2 to-chart-3 bg-clip-text font-heading text-transparent">
               Vrijgezellenfeest
-            </CardTitle>
-            <p className="mt-1 text-2xl font-semibold text-foreground">Marion</p>
-            <p className="mt-2 text-base text-muted-foreground">
+            </h1>
+            <p className="font-heading text-2xl font-bold text-foreground">Marion</p>
+            <p className="text-base leading-relaxed text-muted-foreground">
               Hoe goed ken jij de aanstaande bruid? Doe mee met de quiz!
             </p>
           </CardHeader>
@@ -93,25 +112,21 @@ export function QuizClient({ initialQuestions }: Props) {
               value={name}
               onChange={(e) => setName(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleJoin()}
-              className="h-12 text-center text-lg"
+              className="h-12 min-h-12 border-white/15 bg-input/40 text-center text-base"
               autoFocus
+              maxLength={24}
             />
             <Button
               size="lg"
-              className="h-12 w-full text-lg"
+              className="h-12 min-h-12 w-full text-base font-semibold shadow-lg shadow-primary/20"
               onClick={handleJoin}
               disabled={name.trim().length < 1}
             >
               Doe mee!
             </Button>
-            <p className="text-center text-xs text-muted-foreground">
-              <Link href="/admin" className="underline underline-offset-2">
-                Beheer quizvragen
-              </Link>
-            </p>
           </CardContent>
         </Card>
-      </div>
+      </QuizScreenShell>
     );
   }
 
@@ -122,67 +137,85 @@ export function QuizClient({ initialQuestions }: Props) {
       ((currentQ + (showResult ? 1 : 0)) / questions.length) * 100;
 
     return (
-      <div className="flex min-h-screen flex-1 items-center justify-center p-4">
-        <Card className="w-full max-w-md border-primary/20 shadow-lg">
-          <CardHeader className="pb-3">
-            <div className="mb-2 flex items-center justify-between">
-              <Badge variant="secondary" className="text-sm">
+      <QuizScreenShell>
+        <Card className="w-full max-w-md border border-white/10 bg-card/95 shadow-xl ring-1 ring-white/5 backdrop-blur-sm">
+          <CardHeader className="gap-3 pb-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <Badge variant="secondary" className="text-xs font-semibold">
                 Vraag {currentQ + 1}/{questions.length}
               </Badge>
-              <Badge variant="outline" className="text-sm">
+              <Badge
+                variant="outline"
+                className="quiz-score-nums border-white/20 text-sm font-semibold tabular-nums"
+              >
                 {score} punten
               </Badge>
             </div>
-            <Progress value={progress} className="mb-3 h-2" />
-            <CardTitle className="text-xl leading-snug">{q.question}</CardTitle>
+            <Progress value={progress} className="h-2 gap-0 [&_[data-slot=progress-track]]:h-2 [&_[data-slot=progress-track]]:bg-white/10 [&_[data-slot=progress-indicator]]:bg-gradient-to-r [&_[data-slot=progress-indicator]]:from-primary [&_[data-slot=progress-indicator]]:to-chart-2" />
+            <h2 className="quiz-display-title text-balance text-foreground">
+              {q.question}
+            </h2>
           </CardHeader>
           <CardContent className="flex flex-col gap-3">
-            {q.options.map((option, idx) => {
-              let variant: "outline" | "default" | "secondary" | "destructive" =
-                "outline";
-              if (showResult) {
-                if (idx === q.correct) variant = "default";
-                else if (idx === selectedAnswer) variant = "destructive";
-              }
+            <div className="grid grid-cols-2 gap-3">
+              {q.options.map((option, idx) => {
+                const base = tileSurface(idx);
+                const isCorrect = showResult && idx === q.correct;
+                const isWrongPick =
+                  showResult &&
+                  idx === selectedAnswer &&
+                  idx !== q.correct;
+                const isDimmed =
+                  showResult && idx !== q.correct && idx !== selectedAnswer;
 
-              return (
-                <Button
-                  key={idx}
-                  variant={variant}
-                  size="lg"
-                  className={`h-auto w-full justify-start px-4 py-3 text-left text-base ${
-                    showResult && idx === q.correct
-                      ? "border-green-500 bg-green-500 text-white hover:bg-green-500"
-                      : ""
-                  } ${
-                    showResult &&
-                    idx === selectedAnswer &&
-                    idx !== q.correct
-                      ? "border-red-300 bg-red-100 text-red-700"
-                      : ""
-                  }`}
-                  onClick={() => handleAnswer(idx)}
-                  disabled={showResult}
-                >
-                  {option}
-                </Button>
-              );
-            })}
+                return (
+                  <button
+                    key={idx}
+                    type="button"
+                    disabled={showResult}
+                    onClick={() => handleAnswer(idx)}
+                    className={cn(
+                      "flex min-h-[88px] flex-col items-stretch justify-between gap-2 rounded-[20px] border-2 border-transparent px-3 py-3 text-left text-base font-semibold leading-snug shadow-md transition-all outline-none focus-visible:ring-[3px] focus-visible:ring-ring/60 disabled:cursor-default",
+                      "motion-safe:active:scale-[0.99]",
+                      base,
+                      !showResult && "hover:brightness-110 motion-safe:hover:scale-[1.02]",
+                      isCorrect &&
+                        "border-quiz-correct ring-2 ring-quiz-correct motion-safe:scale-[1.02]",
+                      isWrongPick &&
+                        "border-quiz-incorrect opacity-95 ring-2 ring-quiz-incorrect",
+                      isDimmed && "opacity-40 saturate-75"
+                    )}
+                  >
+                    <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-black/20 text-xs font-extrabold text-inherit">
+                      {TILE_LABELS[idx]}
+                    </span>
+                    <span className="text-pretty">{option}</span>
+                  </button>
+                );
+              })}
+            </div>
 
             {showResult && (
-              <Button
-                size="lg"
-                className="mt-2 h-12 w-full text-lg"
-                onClick={handleNext}
-              >
-                {currentQ < questions.length - 1
-                  ? "Volgende vraag"
-                  : "Bekijk resultaat"}
-              </Button>
+              <div className="mt-1 flex flex-col gap-2">
+                <p className="text-center text-lg font-semibold text-muted-foreground">
+                  {selectedAnswer === q.correct
+                    ? "Goed zo!"
+                    : `Het juiste antwoord was: ${q.options[q.correct]}`}
+                </p>
+                <Button
+                  size="lg"
+                  className="h-12 min-h-12 w-full text-base font-semibold"
+                  onClick={handleNext}
+                >
+                  {currentQ < questions.length - 1
+                    ? "Volgende vraag"
+                    : "Bekijk resultaat"}
+                </Button>
+              </div>
             )}
           </CardContent>
         </Card>
-      </div>
+      </QuizScreenShell>
     );
   }
 
@@ -199,22 +232,24 @@ export function QuizClient({ initialQuestions }: Props) {
     }
 
     return (
-      <div className="flex min-h-screen flex-1 items-center justify-center p-4">
-        <Card className="w-full max-w-md border-primary/20 text-center shadow-lg">
-          <CardHeader>
-            <div className="mb-2 text-6xl">{emoji}</div>
-            <CardTitle className="text-2xl font-bold">
+      <QuizScreenShell>
+        <Card className="w-full max-w-md border border-white/10 bg-card/95 text-center shadow-xl ring-1 ring-white/5 backdrop-blur-sm">
+          <CardHeader className="gap-2">
+            <div className="text-6xl" aria-hidden>
+              {emoji}
+            </div>
+            <h2 className="font-heading text-2xl font-extrabold text-foreground">
               {name}, jouw score:
-            </CardTitle>
+            </h2>
           </CardHeader>
           <CardContent className="flex flex-col items-center gap-4">
-            <div className="text-6xl font-bold text-primary">
+            <div className="quiz-score-nums bg-gradient-to-br from-primary via-chart-2 to-chart-3 bg-clip-text text-6xl font-extrabold tabular-nums text-transparent">
               {score}/{questions.length}
             </div>
-            <p className="text-lg text-muted-foreground">{message}</p>
+            <p className="max-w-[40rem] text-lg text-muted-foreground">{message}</p>
             <Button
               size="lg"
-              className="mt-2 h-12 w-full text-lg"
+              className="mt-2 h-12 min-h-12 w-full text-base font-semibold"
               onClick={() => {
                 setScreen("join");
                 setName("");
@@ -228,7 +263,7 @@ export function QuizClient({ initialQuestions }: Props) {
             </Button>
           </CardContent>
         </Card>
-      </div>
+      </QuizScreenShell>
     );
   }
 

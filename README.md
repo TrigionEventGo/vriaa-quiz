@@ -1,36 +1,57 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Vrijgezellenfeest — Kahoot-style quiz (Next.js)
 
-## Getting Started
+Interactieve quiz voor Marion & Ronald: spelers op mobiel, host stuurt de rondes aan.
 
-First, run the development server:
+## Vereisten
+
+- Node.js 20+
+- `QUIZ_ADMIN_TOKEN` in productie (Vercel **Environment Variables**) — zie [`.env.example`](./.env.example)
+
+## Lokaal draaien
 
 ```bash
+npm install
+cp .env.example .env.local
+# zet QUIZ_ADMIN_TOKEN in .env.local
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- Spelerquiz: [http://localhost:3000](http://localhost:3000)
+- Beheer (na inloggen met hetzelfde wachtwoord als `QUIZ_ADMIN_TOKEN`): [http://localhost:3000/admin](http://localhost:3000/admin)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Admin & API
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- Vragenbestand: `data/quiz-questions.json` (wordt aangemaakt bij eerste save).
+- `GET /api/quiz-questions` — publiek (gecached door de speler-UI).
+- `PUT /api/quiz-questions` — alleen met geldige **admin-sessiecookie** (na `/admin/login`) of header `x-quiz-admin-token: <QUIZ_ADMIN_TOKEN>`.
+- Zonder `QUIZ_ADMIN_TOKEN` op de server zijn admin en writes **niet** afgeschermd (alleen voor lokale ontwikkeling bedoeld).
 
-## Learn More
+## Live sessie (MVP, één serverproces)
 
-To learn more about Next.js, take a look at the following resources:
+Voor een party-build op **één** Node-proces (typisch `next start` op één machine of één Vercel-regio zonder horizontale schaal):
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. Inloggen op `/admin`.
+2. **Live sessie (host)** — maakt een code en opent `/host/<CODE>`.
+3. Deelnemers openen `/play/<CODE>`; die poll’t elke 2s de actieve vraagindex.
+4. Host gebruikt *Volgende* / *Vorige* om de vraag te wisselen.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+> Op serverless met meerdere instances heeft in-memory state **geen** gedeeld geheugen — gebruik dit pad voor rehearsal op één instance, of plan Redis/SSE voor productie (zie roadmap in Paperclip).
 
-## Deploy on Vercel
+## Scripts
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+npm run build   # productiebuild
+npm run start   # na build
+npm run lint
+npm test        # unit tests (o.a. scoring)
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Deploy (Vercel)
+
+1. Repo koppelen aan Vercel; root = deze app.
+2. Zet `QUIZ_ADMIN_TOKEN` in Vercel → Settings → Environment Variables (Production + Preview).
+3. Deploy; test `/admin` login en een vraag opslaan.
+
+## Paperclip / roadmap
+
+Zie company-issue [VRIAA-11](/VRIAA/issues/VRIAA-11#document-plan) plan-document voor fasering (0–4) en QA-checklist na deploy.

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { isAdminAuthorized } from "@/lib/admin-auth";
 import { readQuizQuestions, writeQuizQuestions } from "@/lib/quiz-storage";
 import { parseQuizQuestions } from "@/lib/quiz-types";
 
@@ -16,12 +17,8 @@ export async function GET() {
 }
 
 export async function PUT(request: Request) {
-  const adminToken = process.env.QUIZ_ADMIN_TOKEN;
-  if (adminToken) {
-    const sent = request.headers.get("x-quiz-admin-token");
-    if (sent !== adminToken) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  if (!(await isAdminAuthorized(request))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   let body: unknown;

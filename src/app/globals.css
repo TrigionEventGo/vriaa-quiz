@@ -9,7 +9,16 @@
   --color-foreground: var(--foreground);
   --font-sans: "Geist", "Geist Fallback", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "Geist Mono", "Geist Mono Fallback", ui-monospace, monospace;
-  --font-heading: var(--font-sans);
+  --font-heading: var(--font-display), "Geist", "Geist Fallback", ui-sans-serif,
+    system-ui, sans-serif;
+  --color-quiz-tile-a: var(--quiz-tile-a);
+  --color-quiz-tile-b: var(--quiz-tile-b);
+  --color-quiz-tile-c: var(--quiz-tile-c);
+  --color-quiz-tile-d: var(--quiz-tile-d);
+  --color-quiz-tile-c-fg: var(--quiz-tile-c-fg);
+  --color-quiz-correct: var(--quiz-correct);
+  --color-quiz-incorrect: var(--quiz-incorrect);
+  --color-quiz-gold: var(--quiz-gold);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -49,38 +58,49 @@
 }
 
 :root {
-  --background: oklch(0.98 0.01 350);
-  --foreground: oklch(0.25 0.02 350);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.25 0.02 350);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.25 0.02 350);
-  --primary: oklch(0.65 0.2 350);
-  --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.95 0.03 350);
-  --secondary-foreground: oklch(0.35 0.05 350);
-  --muted: oklch(0.95 0.02 350);
-  --muted-foreground: oklch(0.5 0.03 350);
-  --accent: oklch(0.92 0.05 350);
-  --accent-foreground: oklch(0.35 0.05 350);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.9 0.03 350);
-  --input: oklch(0.9 0.03 350);
-  --ring: oklch(0.65 0.2 350);
-  --chart-1: oklch(0.65 0.2 350);
-  --chart-2: oklch(0.7 0.15 320);
-  --chart-3: oklch(0.75 0.12 290);
-  --chart-4: oklch(0.6 0.18 10);
-  --chart-5: oklch(0.8 0.1 340);
+  /* Party quiz — dark festive base (VRIAA-10 ux-spec) */
+  --font-display: var(--font-nunito), ui-sans-serif, system-ui, sans-serif;
+  --background: #0f0a1a;
+  --foreground: #f5f5f7;
+  --card: #1b1430;
+  --card-foreground: #f5f5f7;
+  --popover: #1b1430;
+  --popover-foreground: #f5f5f7;
+  --primary: #e040fb;
+  --primary-foreground: #0f0a1a;
+  --secondary: rgba(255, 255, 255, 0.08);
+  --secondary-foreground: #f5f5f7;
+  --muted: rgba(255, 255, 255, 0.06);
+  --muted-foreground: rgba(245, 245, 247, 0.72);
+  --accent: rgba(124, 77, 255, 0.25);
+  --accent-foreground: #f5f5f7;
+  --destructive: #ff1744;
+  --border: rgba(255, 255, 255, 0.12);
+  --input: rgba(255, 255, 255, 0.14);
+  --ring: #7c4dff;
+  --chart-1: #e040fb;
+  --chart-2: #7c4dff;
+  --chart-3: #40c4ff;
+  --chart-4: #ffd54f;
+  --chart-5: #69f0ae;
   --radius: 0.75rem;
-  --sidebar: oklch(0.97 0.02 350);
-  --sidebar-foreground: oklch(0.25 0.02 350);
-  --sidebar-primary: oklch(0.65 0.2 350);
-  --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: oklch(0.92 0.05 350);
-  --sidebar-accent-foreground: oklch(0.35 0.05 350);
-  --sidebar-border: oklch(0.9 0.03 350);
-  --sidebar-ring: oklch(0.65 0.2 350);
+  --sidebar: #141022;
+  --sidebar-foreground: #f5f5f7;
+  --sidebar-primary: #e040fb;
+  --sidebar-primary-foreground: #0f0a1a;
+  --sidebar-accent: rgba(255, 255, 255, 0.08);
+  --sidebar-accent-foreground: #f5f5f7;
+  --sidebar-border: rgba(255, 255, 255, 0.12);
+  --sidebar-ring: #7c4dff;
+  /* Answer tiles */
+  --quiz-tile-a: #2962ff;
+  --quiz-tile-b: #d50000;
+  --quiz-tile-c: #ffd600;
+  --quiz-tile-d: #00c853;
+  --quiz-tile-c-fg: #0f0a1a;
+  --quiz-correct: #69f0ae;
+  --quiz-incorrect: #ff8a80;
+  --quiz-gold: #ffd54f;
 }
 
 @layer base {
@@ -92,5 +112,18 @@
   }
   html {
     @apply font-sans;
+  }
+}
+
+@layer utilities {
+  .quiz-display-title {
+    font-family: var(--font-heading);
+    font-size: clamp(1.75rem, 5vw + 1rem, 2.75rem);
+    font-weight: 800;
+    line-height: 1.2;
+    text-wrap: balance;
+  }
+  .quiz-score-nums {
+    font-variant-numeric: tabular-nums;
   }
 }
