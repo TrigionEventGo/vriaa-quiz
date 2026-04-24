@@ -28,5 +28,15 @@
     "question": "Waar heeft Marion haar partner ontmoet?",
     "options": ["Op werk", "Via vrienden", "Online", "Op vakantie"],
     "correct": 0
+  },
+  {
+    "question": "Welk nummer draait Marion het liefst op de dansvloer?",
+    "options": ["Dance classics", "Nederpop", "Latin", "Indie"],
+    "correct": 0
+  },
+  {
+    "question": "Wat is Rons signature move op een feestje?",
+    "options": ["Air guitar", "Polonaise leiden", "Karaoke", "Stil in een hoekje kletsen"],
+    "correct": 2
   }
 ]

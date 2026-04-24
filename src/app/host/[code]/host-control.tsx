@@ -9,6 +9,7 @@ function formatSecondsLeft(endsAt: number): number {
 
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useLiveSessionSse } from "@/hooks/use-live-session-sse";
 import { cn } from "@/lib/utils";
 
 type LeaderRow = {
@@ -34,6 +35,7 @@ export function HostControl({ code }: { code: string }) {
   const [state, setState] = useState<SessionDto | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
+  const [streamHealth, setStreamHealth] = useState<"ok" | "reconnecting">("ok");
 
   useEffect(() => {
     const id = setInterval(() => setTick((n) => n + 1), 250);
@@ -67,38 +69,16 @@ export function HostControl({ code }: { code: string }) {
     });
   }, [refresh]);
 
+  const codeKey = code.trim();
+  useLiveSessionSse(codeKey || null, () => startTransition(() => void refresh()), {
+    onWire: setStreamHealth,
+  });
+
   useEffect(() => {
-    const es = new EventSource(
-      `/api/live/sessions/${encodeURIComponent(code)}/events`
-    );
-    let lastSig = "";
-    es.onmessage = (ev) => {
-      try {
-        const p = JSON.parse(ev.data) as {
-          updatedAt?: number;
-          questionIndex?: number;
-          questionEndsAt?: number;
-          sessionFinished?: boolean;
-        };
-        const sig = `${p.updatedAt}:${p.questionIndex}:${p.questionEndsAt}:${p.sessionFinished}`;
-        if (sig !== lastSig) {
-          lastSig = sig;
-          startTransition(() => void refresh());
-        }
-      } catch {
-        startTransition(() => void refresh());
-      }
-    };
-    es.addEventListener("end", () => es.close());
-    es.onerror = () => {
-      es.close();
-    };
+    if (!codeKey) return;
     const backup = setInterval(() => void refresh(), 15000);
-    return () => {
-      es.close();
-      clearInterval(backup);
-    };
-  }, [code, refresh]);
+    return () => clearInterval(backup);
+  }, [codeKey, refresh]);
 
   async function patch(action: "next" | "prev") {
     setError(null);
@@ -148,6 +128,11 @@ export function HostControl({ code }: { code: string }) {
           <p className="text-sm text-muted-foreground">
             Code: <span className="font-mono font-semibold text-foreground">{code}</span>
           </p>
+          {streamHealth === "reconnecting" && (
+            <p className="text-xs text-amber-600 dark:text-amber-500" role="status">
+              Live verbinding herstellen…
+            </p>
+          )}
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           {error && <p className="text-sm text-destructive">{error}</p>}

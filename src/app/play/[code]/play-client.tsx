@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { useLiveSessionSse } from "@/hooks/use-live-session-sse";
 import type { QuizQuestion } from "@/lib/quiz-types";
 import { cn } from "@/lib/utils";
 
@@ -73,6 +74,7 @@ export function PlayClient({ code }: { code: string }) {
   const [pickedIndex, setPickedIndex] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
+  const [streamHealth, setStreamHealth] = useState<"ok" | "reconnecting">("ok");
 
   useEffect(() => {
     const id = setInterval(() => setTick((n) => n + 1), 250);
@@ -171,6 +173,10 @@ export function PlayClient({ code }: { code: string }) {
     }
   }, [codeKey, playerId, pollSession]);
 
+  useLiveSessionSse(playerId ? codeKey : null, () => void syncSession(), {
+    onWire: setStreamHealth,
+  });
+
   useEffect(() => {
     if (!playerId) return;
     let cancelled = false;
@@ -187,37 +193,10 @@ export function PlayClient({ code }: { code: string }) {
     };
     document.addEventListener("visibilitychange", onVisibility);
 
-    const es = new EventSource(
-      `/api/live/sessions/${encodeURIComponent(codeKey)}/events`
-    );
-    let lastSig = "";
-    es.onmessage = (ev) => {
-      try {
-        const p = JSON.parse(ev.data) as {
-          updatedAt?: number;
-          questionIndex?: number;
-          questionEndsAt?: number;
-          sessionFinished?: boolean;
-        };
-        const sig = `${p.updatedAt}:${p.questionIndex}:${p.questionEndsAt}:${p.sessionFinished}`;
-        if (sig !== lastSig) {
-          lastSig = sig;
-          void tick();
-        }
-      } catch {
-        void tick();
-      }
-    };
-    es.addEventListener("end", () => es.close());
-    es.onerror = () => {
-      es.close();
-    };
-
     return () => {
       cancelled = true;
       clearInterval(timer);
       document.removeEventListener("visibilitychange", onVisibility);
-      es.close();
     };
   }, [codeKey, playerId, syncSession]);
 
@@ -507,6 +486,11 @@ export function PlayClient({ code }: { code: string }) {
               {session.player.totalPoints} punten
             </Badge>
           </div>
+          {streamHealth === "reconnecting" && (
+            <p className="text-center text-xs text-amber-600 dark:text-amber-500" role="status">
+              Live verbinding herstellen…
+            </p>
+          )}
           <p
             role="status"
             aria-live="polite"
