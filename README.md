@@ -32,7 +32,7 @@ Voor een party-build op **één** Node-proces (typisch `next start` op één mac
 
 1. Inloggen op `/admin`.
 2. **Live sessie (host)** — maakt een code en opent `/host/<CODE>`.
-3. Deelnemers openen `/play/<CODE>`; die poll’t elke 2s de actieve vraagindex.
+3. Deelnemers openen `/play/<CODE>`, vullen een naam in (`POST .../players`), en antwoorden per vraag (`POST .../answer`); UI poll’t elke ~2s voor host-index + score.
 4. Host gebruikt *Volgende* / *Vorige* om de vraag te wisselen.
 
 > Op serverless met meerdere instances heeft in-memory state **geen** gedeeld geheugen — gebruik dit pad voor rehearsal op één instance, of plan Redis/SSE voor productie (zie roadmap in Paperclip).
