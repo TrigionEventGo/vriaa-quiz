@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Quiz - Marion & Ronald",
-  description: "Interactieve quiz voor het vrijgezellenfeest van Marion & Ronald",
+  title: "Vrijgezellenfeest Marion",
+  description: "Interactieve quiz voor het vrijgezellenfeest van Marion",
 };
 
 export const viewport: Viewport = {
@@ -32,7 +32,7 @@ export default function RootLayout({
   return (
     <html
       lang="nl"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark`}
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
