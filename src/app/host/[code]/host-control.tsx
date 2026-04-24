@@ -68,9 +68,37 @@ export function HostControl({ code }: { code: string }) {
   }, [refresh]);
 
   useEffect(() => {
-    const t = setInterval(() => void refresh(), 3000);
-    return () => clearInterval(t);
-  }, [refresh]);
+    const es = new EventSource(
+      `/api/live/sessions/${encodeURIComponent(code)}/events`
+    );
+    let lastSig = "";
+    es.onmessage = (ev) => {
+      try {
+        const p = JSON.parse(ev.data) as {
+          updatedAt?: number;
+          questionIndex?: number;
+          questionEndsAt?: number;
+          sessionFinished?: boolean;
+        };
+        const sig = `${p.updatedAt}:${p.questionIndex}:${p.questionEndsAt}:${p.sessionFinished}`;
+        if (sig !== lastSig) {
+          lastSig = sig;
+          startTransition(() => void refresh());
+        }
+      } catch {
+        startTransition(() => void refresh());
+      }
+    };
+    es.addEventListener("end", () => es.close());
+    es.onerror = () => {
+      es.close();
+    };
+    const backup = setInterval(() => void refresh(), 15000);
+    return () => {
+      es.close();
+      clearInterval(backup);
+    };
+  }, [code, refresh]);
 
   async function patch(action: "next" | "prev") {
     setError(null);

@@ -38,6 +38,8 @@ Voor een party-build op **één** Node-proces (typisch `next start` op één mac
 
 > Op serverless met meerdere instances heeft in-memory state **geen** gedeeld geheugen — gebruik dit pad voor rehearsal op één instance, of plan Redis/SSE voor productie (zie roadmap in Paperclip).
 
+**Realtime hint:** `GET /api/live/sessions/[code]/events` levert **Server-Sent Events** (compacte “pulse” bij wijzigingen). Host- en speler-UI luisteren daarop en **herladen** daarna de volledige state via de bestaande JSON-`GET` (fallback-poll blijft als vangnet).
+
 ## Scripts
 
 ```bash

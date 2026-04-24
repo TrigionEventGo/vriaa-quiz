@@ -151,44 +151,75 @@ export function PlayClient({ code }: { code: string }) {
     if (stored) startTransition(() => setPlayerId(stored));
   }, [codeKey]);
 
+  const syncSession = useCallback(async () => {
+    const pid = playerId;
+    if (!pid) return;
+    try {
+      const r = await pollSession(pid);
+      if (r.kind === "unknown_player") {
+        window.sessionStorage.removeItem(storageKey(codeKey));
+        setPlayerId(null);
+        setSession(null);
+        setError("Sessie verlopen — meld je opnieuw aan.");
+        return;
+      }
+      setError(null);
+      setSession(r.body);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Netwerkfout bij sessie.");
+      setSession(null);
+    }
+  }, [codeKey, playerId, pollSession]);
+
   useEffect(() => {
     if (!playerId) return;
-    const pid = playerId;
     let cancelled = false;
 
     async function tick() {
-      try {
-        const r = await pollSession(pid);
-        if (cancelled) return;
-        if (r.kind === "unknown_player") {
-          window.sessionStorage.removeItem(storageKey(codeKey));
-          setPlayerId(null);
-          setSession(null);
-          setError("Sessie verlopen — meld je opnieuw aan.");
-          return;
-        }
-        setError(null);
-        setSession(r.body);
-      } catch (e) {
-        if (!cancelled) {
-          setError(e instanceof Error ? e.message : "Netwerkfout bij sessie.");
-          setSession(null);
-        }
-      }
+      if (cancelled) return;
+      await syncSession();
     }
 
     void tick();
-    const timer = setInterval(() => void tick(), 2000);
+    const timer = setInterval(() => void tick(), 10000);
     const onVisibility = () => {
       if (document.visibilityState === "visible") void tick();
     };
     document.addEventListener("visibilitychange", onVisibility);
+
+    const es = new EventSource(
+      `/api/live/sessions/${encodeURIComponent(codeKey)}/events`
+    );
+    let lastSig = "";
+    es.onmessage = (ev) => {
+      try {
+        const p = JSON.parse(ev.data) as {
+          updatedAt?: number;
+          questionIndex?: number;
+          questionEndsAt?: number;
+          sessionFinished?: boolean;
+        };
+        const sig = `${p.updatedAt}:${p.questionIndex}:${p.questionEndsAt}:${p.sessionFinished}`;
+        if (sig !== lastSig) {
+          lastSig = sig;
+          void tick();
+        }
+      } catch {
+        void tick();
+      }
+    };
+    es.addEventListener("end", () => es.close());
+    es.onerror = () => {
+      es.close();
+    };
+
     return () => {
       cancelled = true;
       clearInterval(timer);
       document.removeEventListener("visibilitychange", onVisibility);
+      es.close();
     };
-  }, [codeKey, playerId, pollSession]);
+  }, [codeKey, playerId, syncSession]);
 
   useEffect(() => {
     if (!session) return;
