@@ -23,3 +23,19 @@ export function totalScoreForAnswers(
   }
   return sum;
 }
+
+/** Sum scores for sparse `questionIndex -> optionIndex` answers (live session sheet). */
+export function totalScoreFromAnswerMap(
+  questions: { correct: number }[],
+  answersByQuestion: Record<number, number>
+): number {
+  let sum = 0;
+  for (const [key, selected] of Object.entries(answersByQuestion)) {
+    const i = Number(key);
+    if (!Number.isInteger(i) || i < 0 || i >= questions.length) continue;
+    const q = questions[i];
+    if (!q) continue;
+    sum += scoreMultipleChoice(q.correct, selected);
+  }
+  return sum;
+}

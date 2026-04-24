@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { scoreMultipleChoice, totalScoreForAnswers } from "./scoring";
+import {
+  scoreMultipleChoice,
+  totalScoreForAnswers,
+  totalScoreFromAnswerMap,
+} from "./scoring";
 
 describe("scoreMultipleChoice", () => {
   it("awards 1 when correct", () => {
@@ -20,5 +24,15 @@ describe("totalScoreForAnswers", () => {
     const qs = [{ correct: 0 }, { correct: 1 }, { correct: 2 }];
     const ans: (number | null)[] = [0, 2, 2];
     assert.equal(totalScoreForAnswers(qs, ans), 2);
+  });
+});
+
+describe("totalScoreFromAnswerMap", () => {
+  it("sums sparse question indices", () => {
+    const qs = [{ correct: 0 }, { correct: 1 }, { correct: 2 }];
+    assert.equal(
+      totalScoreFromAnswerMap(qs, { 0: 0, 2: 2 }),
+      2
+    );
   });
 });

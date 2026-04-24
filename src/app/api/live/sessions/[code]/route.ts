@@ -3,29 +3,59 @@ import { NextResponse } from "next/server";
 import { isAdminAuthorized } from "@/lib/admin-auth";
 import { getLiveSession, patchLiveSession } from "@/lib/live-session";
 import { readQuizQuestions } from "@/lib/quiz-storage";
+import { totalScoreFromAnswerMap } from "@/lib/scoring";
 
 export const dynamic = "force-dynamic";
 
 type RouteContext = { params: Promise<{ code: string }> };
 
-export async function GET(_request: Request, context: RouteContext) {
+export async function GET(request: Request, context: RouteContext) {
   const { code } = await context.params;
   const session = getLiveSession(code);
   if (!session) {
     return NextResponse.json({ error: "Session not found" }, { status: 404 });
   }
-  let total = 0;
+  let questions: Awaited<ReturnType<typeof readQuizQuestions>> = [];
   try {
-    const qs = await readQuizQuestions();
-    total = qs.length;
+    questions = await readQuizQuestions();
   } catch {
-    total = 0;
+    questions = [];
   }
-  return NextResponse.json({
+  const total = questions.length;
+
+  const url = new URL(request.url);
+  const playerId = url.searchParams.get("playerId")?.trim() ?? "";
+
+  const base = {
     code: session.code,
     questionIndex: session.questionIndex,
     totalQuestions: total,
     updatedAt: session.updatedAt,
+  };
+
+  if (!playerId) {
+    return NextResponse.json(base);
+  }
+
+  const player = session.players[playerId];
+  if (!player) {
+    return NextResponse.json(
+      { ...base, error: "Unknown player" },
+      { status: 404 }
+    );
+  }
+
+  const qIdx = session.questionIndex;
+  const answeredCurrent = player.answersByQuestion[qIdx] !== undefined;
+  const totalPoints = totalScoreFromAnswerMap(questions, player.answersByQuestion);
+
+  return NextResponse.json({
+    ...base,
+    player: {
+      nickname: player.nickname,
+      answeredCurrent,
+      totalPoints,
+    },
   });
 }
 
